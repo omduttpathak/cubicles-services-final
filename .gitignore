@@ -1,0 +1,108 @@
+# --------------------------------------------------
+# Secrets and environment configuration
+# --------------------------------------------------
+.env
+.env.*
+!.env.example
+
+**/.env
+**/.env.*
+!**/.env.example
+
+# --------------------------------------------------
+# Frontend dependencies and generated output
+# --------------------------------------------------
+node_modules/
+**/node_modules/
+
+dist/
+**/dist/
+
+coverage/
+**/coverage/
+
+.vite/
+**/.vite/
+
+*.tsbuildinfo
+
+# --------------------------------------------------
+# Python environments and generated files
+# --------------------------------------------------
+venv/
+.venv/
+**/venv/
+**/.venv/
+
+__pycache__/
+**/__pycache__/
+
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# --------------------------------------------------
+# Runtime files and uploaded user content
+# --------------------------------------------------
+uploads/
+**/uploads/
+
+*.log
+logs/
+**/logs/
+
+# --------------------------------------------------
+# Database backups and private data
+# --------------------------------------------------
+database/full_database.sql
+database/private/
+database/backups/
+
+*.dump
+*.bak
+*.backup
+
+# Local database files
+*.sqlite
+*.sqlite3
+*.db
+
+# --------------------------------------------------
+# Temporary files
+# --------------------------------------------------
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+backup*
+bkp-*
+**/backup*
+**/bkp-*
+
+# --------------------------------------------------
+# IDE and operating system
+# --------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --------------------------------------------------
+# Credentials, certificates and keys
+# --------------------------------------------------
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+# Keep uploads folder but ignore uploaded files
+!backend/uploads/
+backend/uploads/*
+!backend/uploads/README.md
