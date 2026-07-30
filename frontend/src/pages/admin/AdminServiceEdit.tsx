@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react"
+import {
+  CheckCircle2,
+  Globe2,
+  Plus,
+  Sparkles,
+  Trash2,
+  Wrench,
+} from "lucide-react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
@@ -9,6 +16,11 @@ import {
   updateAdminService,
   type UpdateAdminServiceRequest,
 } from "@/api/adminServicesApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
+import StickyActionPanel from "@/components/admin/forms/StickyActionPanel"
 import RichTextEditor from "@/components/admin/RichTextEditor"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
@@ -55,7 +67,6 @@ export default function AdminServiceEdit() {
   }>()
 
   const navigate = useNavigate()
-
   const parsedServiceId = Number(serviceId)
 
   const [formData, setFormData] =
@@ -224,7 +235,6 @@ export default function AdminServiceEdit() {
       })
 
       toast.success("Service updated successfully.")
-
       navigate("/admin/services")
     } catch (error) {
       console.error(error)
@@ -279,6 +289,19 @@ export default function AdminServiceEdit() {
     )
   }
 
+  const completedRequiredFields = [
+    formData.title.trim().length >= 3,
+    createSlug(formData.slug).length >= 3,
+    formData.icon.trim().length >= 2,
+    formData.short_description.trim().length >= 20,
+    getPlainText(formData.description).length >= 50,
+    formData.highlights.some((highlight) => highlight.trim().length > 0),
+    formData.hero_title.trim().length >= 3,
+    formData.hero_description.trim().length >= 20,
+    formData.seo_title.trim().length >= 10,
+    formData.seo_description.trim().length >= 20,
+  ].filter(Boolean).length
+
   return (
     <>
       <SEO
@@ -286,49 +309,28 @@ export default function AdminServiceEdit() {
         description="Edit an existing Cubicles Services website service."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <button
-              type="button"
-              onClick={() => navigate("/admin/services")}
-              className="inline-flex items-center text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Services
-            </button>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Service management"
+          title={`Edit ${formData.title || "Service"}`}
+          description="Update the public service page, its highlights, hero messaging, and search-engine metadata."
+          backLabel="Back to Services"
+          onBack={() => navigate("/admin/services")}
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={isSubmitting}
+          onSubmit={() => {
+            void handleSubmit()
+          }}
+        />
 
-            <h1 className="mt-3 text-2xl font-bold text-slate-900">
-              Edit Service
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Update service content, highlights, hero copy and SEO information.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Save className="mr-2 h-4 w-4" />
-
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Service Information
-              </h2>
-
-              <div className="mt-6 space-y-5">
+            <FormCard
+              title="Service information"
+              description="Update the core identity and public-facing service content."
+            >
+              <div className="space-y-6">
                 <FormField id="service-title" label="Service Title" required>
                   <input
                     id="service-title"
@@ -342,22 +344,25 @@ export default function AdminServiceEdit() {
                   />
                 </FormField>
 
-                <FormField id="service-slug" label="Slug" required>
-                  <input
-                    id="service-slug"
-                    type="text"
-                    maxLength={150}
-                    value={formData.slug}
-                    onChange={(event) =>
-                      updateField("slug", createSlug(event.target.value))
-                    }
-                    className={`${inputClassName} font-mono text-sm`}
-                  />
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Public URL: /services/
-                    {formData.slug}
-                  </p>
+                <FormField
+                  id="service-slug"
+                  label="Slug"
+                  required
+                  description={`Public URL: /services/${formData.slug}`}
+                >
+                  <div className="relative">
+                    <Globe2 className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="service-slug"
+                      type="text"
+                      maxLength={150}
+                      value={formData.slug}
+                      onChange={(event) =>
+                        updateField("slug", createSlug(event.target.value))
+                      }
+                      className={`${inputClassName} pl-12 font-mono text-sm`}
+                    />
+                  </div>
                 </FormField>
 
                 <FormField
@@ -383,58 +388,59 @@ export default function AdminServiceEdit() {
                 </FormField>
 
                 <div>
-                  <label className="mb-2 block font-medium text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     Full Description
                     <span className="text-red-600"> *</span>
                   </label>
 
-                  <RichTextEditor
-                    value={formData.description}
-                    onChange={(value) => updateField("description", value)}
-                    placeholder="Describe the service, business value and delivery approach."
-                    disabled={isSubmitting}
-                  />
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100">
+                    <RichTextEditor
+                      value={formData.description}
+                      onChange={(value) => updateField("description", value)}
+                      placeholder="Describe the service, business value and delivery approach."
+                      disabled={isSubmitting}
+                    />
+                  </div>
 
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
                     Enter at least 50 visible characters. Use headings, lists,
-                    quotes and formatting to structure the service content.
+                    quotes, and formatting to structure the content.
                   </p>
                 </div>
               </div>
-            </div>
+            </FormCard>
 
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Service Highlights
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    Update the capabilities displayed on the service page.
-                  </p>
-                </div>
-
+            <FormCard
+              title="Service highlights"
+              description="Update the capabilities and benefits shown on the public service page."
+              action={
                 <button
                   type="button"
                   onClick={addHighlight}
-                  className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-4 py-2 font-semibold text-blue-600 transition hover:bg-blue-50"
+                  className="inline-flex h-10 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 size-4" />
                   Add Highlight
                 </button>
-              </div>
-
-              <div className="mt-6 space-y-3">
+              }
+            >
+              <div className="space-y-3">
                 {formData.highlights.map((highlight, index) => (
-                  <div key={index} className="flex items-center gap-3">
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3"
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-extrabold text-blue-600 shadow-sm ring-1 ring-slate-200">
+                      {index + 1}
+                    </div>
+
                     <input
                       type="text"
                       value={highlight}
                       onChange={(event) =>
                         updateHighlight(index, event.target.value)
                       }
-                      className={inputClassName}
+                      className={`${inputClassName} bg-white`}
                       placeholder={`Highlight ${index + 1}`}
                     />
 
@@ -444,19 +450,20 @@ export default function AdminServiceEdit() {
                       onClick={() => removeHighlight(index)}
                       title="Remove highlight"
                       aria-label={`Remove highlight ${index + 1}`}
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </button>
                   </div>
                 ))}
               </div>
-            </div>
+            </FormCard>
 
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">Hero Section</h2>
-
-              <div className="mt-6 space-y-5">
+            <FormCard
+              title="Hero section"
+              description="Update the primary message visitors see at the top of the service page."
+            >
+              <div className="space-y-6">
                 <FormField id="service-hero-title" label="Hero Title" required>
                   <input
                     id="service-hero-title"
@@ -492,14 +499,13 @@ export default function AdminServiceEdit() {
                   />
                 </FormField>
               </div>
-            </div>
+            </FormCard>
 
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Search Engine Optimization
-              </h2>
-
-              <div className="mt-6 space-y-5">
+            <FormCard
+              title="Search engine optimization"
+              description="Update how the service appears in search results and shared links."
+            >
+              <div className="space-y-6">
                 <FormField id="service-seo-title" label="SEO Title" required>
                   <input
                     id="service-seo-title"
@@ -540,17 +546,42 @@ export default function AdminServiceEdit() {
                   />
                 </FormField>
               </div>
-            </div>
+            </FormCard>
           </div>
 
-          <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Display Settings
-              </h2>
+          <div className="space-y-6">
+            <StickyActionPanel
+              title="Save changes"
+              description="Review the updated content before publishing it to the live service page."
+              submitLabel="Save Changes"
+              submittingLabel="Saving..."
+              isSubmitting={isSubmitting}
+              onSubmit={() => {
+                void handleSubmit()
+              }}
+              secondaryAction={
+                <button
+                  type="button"
+                  onClick={() => navigate("/admin/services")}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+              }
+            />
 
-              <div className="mt-6">
-                <FormField id="service-icon" label="Icon Name" required>
+            <FormCard
+              title="Display settings"
+              description="Update the icon identifier used by the public service page."
+            >
+              <FormField
+                id="service-icon"
+                label="Icon Name"
+                required
+                description="Existing values include cloud, workflow, refresh, and shield."
+              >
+                <div className="relative">
+                  <Wrench className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
                   <input
                     id="service-icon"
                     type="text"
@@ -559,64 +590,59 @@ export default function AdminServiceEdit() {
                     onChange={(event) =>
                       updateField("icon", event.target.value)
                     }
-                    className={`${inputClassName} font-mono`}
+                    className={`${inputClassName} pl-12 font-mono`}
                   />
+                </div>
+              </FormField>
+            </FormCard>
 
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Existing values include cloud, workflow, refresh and shield.
+            <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                  <Sparkles className="size-5" />
+                </div>
+
+                <div>
+                  <h2 className="font-extrabold text-slate-950">
+                    Completion progress
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {completedRequiredFields} of 10 required checks currently
+                    pass.
                   </p>
-                </FormField>
+                </div>
               </div>
-            </div>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <h2 className="font-bold text-slate-900">Public Visibility</h2>
+              <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-white/80">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-600 to-violet-600 transition-all duration-500"
+                  style={{
+                    width: `${(completedRequiredFields / 10) * 100}%`,
+                  }}
+                />
+              </div>
+            </section>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Saving changes updates the public service page immediately.
-              </p>
-            </div>
-          </aside>
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+
+                <div>
+                  <h2 className="font-extrabold text-slate-950">
+                    Public visibility
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Saving changes updates the public service page immediately.
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
-      </section>
+      </div>
     </>
   )
 }
 
-type FormFieldProps = {
-  id: string
-  label: string
-  required?: boolean
-  children: React.ReactNode
-}
-
-function FormField({ id, label, required = false, children }: FormFieldProps) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-
-        {required && <span className="text-red-600"> *</span>}
-      </label>
-
-      {children}
-    </div>
-  )
-}
-
-function CharacterCount({
-  current,
-  maximum,
-}: {
-  current: number
-  maximum: number
-}) {
-  return (
-    <p className="mt-1 text-right text-xs text-slate-500">
-      {current}/{maximum}
-    </p>
-  )
-}
-
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

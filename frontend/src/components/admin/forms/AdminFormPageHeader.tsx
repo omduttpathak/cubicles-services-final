@@ -52,7 +52,7 @@ export default function AdminFormPageHeader({
 
         <div className="mt-6 flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold tracking-[0.16em] text-blue-200 uppercase">
               <Sparkles className="size-4" />
               {eyebrow}
             </div>

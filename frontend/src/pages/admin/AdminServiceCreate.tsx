@@ -312,7 +312,7 @@ export default function AdminServiceCreate() {
                   }`}
                 >
                   <div className="relative">
-                    <Globe2 className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                    <Globe2 className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
                     <input
                       id="service-slug"
                       type="text"
@@ -548,7 +548,7 @@ export default function AdminServiceCreate() {
                 description="Use the same naming style as existing records, such as cloud, workflow, refresh, or shield."
               >
                 <div className="relative">
-                  <Wrench className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                  <Wrench className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
                   <input
                     id="service-icon"
                     type="text"
@@ -600,9 +600,8 @@ export default function AdminServiceCreate() {
                     Public visibility
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Services become public immediately after creation. Draft
-                    and publish controls can be added when the API supports
-                    them.
+                    Services become public immediately after creation. Draft and
+                    publish controls can be added when the API supports them.
                   </p>
                 </div>
               </div>

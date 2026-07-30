@@ -39,9 +39,7 @@ export default function StickyActionPanel({
           {isSubmitting ? submittingLabel : submitLabel}
         </button>
 
-        {secondaryAction ? (
-          <div className="mt-3">{secondaryAction}</div>
-        ) : null}
+        {secondaryAction ? <div className="mt-3">{secondaryAction}</div> : null}
       </div>
     </aside>
   )

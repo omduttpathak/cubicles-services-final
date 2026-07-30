@@ -3,11 +3,11 @@ import axios from "axios"
 import {
   Blocks,
   BriefcaseBusiness,
+  CheckCircle2,
   Eye,
   Flag,
   Layers3,
   MousePointerClick,
-  Save,
   Search,
   Sparkles,
 } from "lucide-react"
@@ -18,6 +18,11 @@ import {
   updateAdminServicesPage,
   type UpdateAdminServicesPageRequest,
 } from "@/api/adminServicesPageApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
+import StickyActionPanel from "@/components/admin/forms/StickyActionPanel"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
@@ -28,17 +33,14 @@ const initialFormData: UpdateAdminServicesPageRequest = {
   hero_highlight: "Digital Solutions",
   hero_description:
     "At Cubicles Services, we help startups and enterprises build scalable software solutions using modern technologies. From web applications to cloud infrastructure and DevOps automation, we deliver reliable digital products that drive business growth.",
-
   primary_button_text: "Get Started",
   primary_button_url: "/contact",
   secondary_button_text: "Contact Us",
   secondary_button_url: "/contact",
-
   hero_feature_one: "Web Development",
   hero_feature_two: "Cloud & DevOps",
   hero_feature_three: "Mobile Applications",
   hero_feature_four: "AI Solutions",
-
   services_eyebrow: "Our Services",
   services_title: "End-to-End Cloud & Digital Engineering Services",
   services_description:
@@ -47,22 +49,18 @@ const initialFormData: UpdateAdminServicesPageRequest = {
   services_empty_description:
     "Service information will appear here when available.",
   service_button_text: "Learn More",
-
   benefits_badge: "Why Choose Us",
   benefits_title: "Why Organizations Choose Cubicles Services",
   benefits_description:
     "We combine cloud expertise, automation and security best practices to deliver reliable technology solutions that help businesses grow.",
-
   process_eyebrow: "Our Process",
   process_title: "How We Deliver Successful Projects",
   process_description:
     "Every engagement follows a structured methodology that minimizes risks, improves delivery quality and ensures successful project execution.",
-
   industries_eyebrow: "Industries",
   industries_title: "Industries We Serve",
   industries_description:
     "We help organizations across multiple industries modernize, automate and scale their technology platforms.",
-
   cta_title: "Ready to Transform Your Business?",
   cta_description:
     "Partner with Cubicles Services for cloud migration, DevOps automation, application modernization and managed IT solutions.",
@@ -70,11 +68,9 @@ const initialFormData: UpdateAdminServicesPageRequest = {
   cta_primary_button_url: "/contact",
   cta_secondary_button_text: "Explore Technologies",
   cta_secondary_button_url: "/technologies",
-
   seo_title: "Cloud Services | Cubicles Services",
   seo_description:
     "Cloud migration, DevOps engineering, application modernization and managed IT services.",
-
   show_hero: true,
   show_services: true,
   show_benefits: true,
@@ -161,7 +157,6 @@ export default function AdminServicesPage() {
   async function handleSubmit() {
     const hasMissingField = requiredStringFields.some((field) => {
       const value = formData[field]
-
       return typeof value === "string" && !value.trim()
     })
 
@@ -175,7 +170,6 @@ export default function AdminServicesPage() {
 
       const payload = trimServicesPageData(formData)
       const updated = await updateAdminServicesPage(payload)
-
       const { id: _id, ...settings } = updated
 
       setFormData(settings)
@@ -231,6 +225,16 @@ export default function AdminServicesPage() {
     )
   }
 
+  const visibleSectionCount = [
+    formData.show_hero,
+    formData.show_services,
+    formData.show_benefits,
+    formData.show_process,
+    formData.show_stats,
+    formData.show_industries,
+    formData.show_cta,
+  ].filter(Boolean).length
+
   return (
     <>
       <SEO
@@ -238,41 +242,26 @@ export default function AdminServicesPage() {
         description="Manage the public Services page content, visibility and SEO."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold tracking-wider text-blue-600 uppercase">
-              Content Management
-            </p>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Content management"
+          title="Services Page"
+          description="Manage the public Services page hero, section headings, calls to action, visibility controls, and SEO settings."
+          backLabel="Services content"
+          onBack={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={isSubmitting}
+          onSubmit={() => {
+            void handleSubmit()
+          }}
+        />
 
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Services Page
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Manage the Services page hero, section headings, calls to action,
-              visibility and SEO.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <Panel
-              icon={<Sparkles className="h-5 w-5" />}
-              title="Hero Section"
+            <SectionCard
+              icon={<Sparkles className="size-5" />}
+              title="Hero section"
               description="Manage the introduction displayed at the top of the Services page."
             >
               <TextField
@@ -312,11 +301,11 @@ export default function AdminServicesPage() {
                 current={formData.hero_description.length}
                 maximum={1000}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<MousePointerClick className="h-5 w-5" />}
-              title="Hero Buttons"
+            <SectionCard
+              icon={<MousePointerClick className="size-5" />}
+              title="Hero buttons"
               description="Configure the primary and secondary hero actions."
             >
               <div className="grid gap-5 md:grid-cols-2">
@@ -358,52 +347,57 @@ export default function AdminServicesPage() {
                   }
                 />
               </div>
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Blocks className="h-5 w-5" />}
-              title="Hero Feature Labels"
+            <SectionCard
+              icon={<Blocks className="size-5" />}
+              title="Hero feature labels"
               description="Manage the four capability labels displayed beside the hero content."
             >
               <div className="grid gap-5 md:grid-cols-2">
-                <TextField
-                  id="services-feature-one"
-                  label="Feature One"
-                  value={formData.hero_feature_one}
-                  maxLength={150}
-                  onChange={(value) => updateField("hero_feature_one", value)}
-                />
-
-                <TextField
-                  id="services-feature-two"
-                  label="Feature Two"
-                  value={formData.hero_feature_two}
-                  maxLength={150}
-                  onChange={(value) => updateField("hero_feature_two", value)}
-                />
-
-                <TextField
-                  id="services-feature-three"
-                  label="Feature Three"
-                  value={formData.hero_feature_three}
-                  maxLength={150}
-                  onChange={(value) => updateField("hero_feature_three", value)}
-                />
-
-                <TextField
-                  id="services-feature-four"
-                  label="Feature Four"
-                  value={formData.hero_feature_four}
-                  maxLength={150}
-                  onChange={(value) => updateField("hero_feature_four", value)}
-                />
+                {[
+                  [
+                    "hero_feature_one",
+                    "Feature One",
+                    formData.hero_feature_one,
+                  ],
+                  [
+                    "hero_feature_two",
+                    "Feature Two",
+                    formData.hero_feature_two,
+                  ],
+                  [
+                    "hero_feature_three",
+                    "Feature Three",
+                    formData.hero_feature_three,
+                  ],
+                  [
+                    "hero_feature_four",
+                    "Feature Four",
+                    formData.hero_feature_four,
+                  ],
+                ].map(([field, label, value], index) => (
+                  <TextField
+                    key={field}
+                    id={`services-feature-${index + 1}`}
+                    label={label}
+                    value={value}
+                    maxLength={150}
+                    onChange={(nextValue) =>
+                      updateField(
+                        field as keyof UpdateAdminServicesPageRequest,
+                        nextValue
+                      )
+                    }
+                  />
+                ))}
               </div>
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Layers3 className="h-5 w-5" />}
-              title="Services Listing Section"
-              description="Manage the heading, empty state and card-button text."
+            <SectionCard
+              icon={<Layers3 className="size-5" />}
+              title="Services listing section"
+              description="Manage the heading, empty state, and service-card action text."
             >
               <TextField
                 id="services-list-eyebrow"
@@ -467,11 +461,11 @@ export default function AdminServicesPage() {
                   updateField("services_empty_description", value)
                 }
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Sparkles className="h-5 w-5" />}
-              title="Benefits Section"
+            <SectionCard
+              icon={<Sparkles className="size-5" />}
+              title="Benefits section"
               description="Manage the heading displayed above the benefit cards."
             >
               <TextField
@@ -498,11 +492,11 @@ export default function AdminServicesPage() {
                 maxLength={1000}
                 onChange={(value) => updateField("benefits_description", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Flag className="h-5 w-5" />}
-              title="Process Section"
+            <SectionCard
+              icon={<Flag className="size-5" />}
+              title="Process section"
               description="Manage the heading above the delivery-process steps."
             >
               <TextField
@@ -529,11 +523,11 @@ export default function AdminServicesPage() {
                 maxLength={1000}
                 onChange={(value) => updateField("process_description", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Industries Section"
+            <SectionCard
+              icon={<BriefcaseBusiness className="size-5" />}
+              title="Industries section"
               description="Manage the heading above the industry cards."
             >
               <TextField
@@ -562,11 +556,11 @@ export default function AdminServicesPage() {
                   updateField("industries_description", value)
                 }
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<MousePointerClick className="h-5 w-5" />}
-              title="Call to Action"
+            <SectionCard
+              icon={<MousePointerClick className="size-5" />}
+              title="Call to action"
               description="Manage the final conversion section."
             >
               <TextField
@@ -627,11 +621,11 @@ export default function AdminServicesPage() {
                   }
                 />
               </div>
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Search className="h-5 w-5" />}
-              title="Search Engine Optimization"
+            <SectionCard
+              icon={<Search className="size-5" />}
+              title="Search engine optimization"
               description="Metadata used by search engines and social previews."
             >
               <TextField
@@ -660,29 +654,29 @@ export default function AdminServicesPage() {
                 current={formData.seo_description.length}
                 maximum={500}
               />
-            </Panel>
+            </SectionCard>
           </div>
 
-          <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                  <Eye className="h-6 w-6" />
-                </div>
+          <div className="space-y-6">
+            <StickyActionPanel
+              title="Save page settings"
+              description="Review the content and visibility options before updating the public Services page."
+              submitLabel="Save Changes"
+              submittingLabel="Saving..."
+              isSubmitting={isSubmitting}
+              onSubmit={() => {
+                void handleSubmit()
+              }}
+            />
 
-                <div>
-                  <h2 className="font-bold text-slate-900">Page Visibility</h2>
-
-                  <p className="text-sm text-slate-500">
-                    Control the public Services page.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-4">
+            <FormCard
+              title="Page visibility"
+              description="Control which sections appear on the public Services page."
+            >
+              <div className="space-y-3">
                 <ToggleField
                   title="Services Page Active"
-                  description="Keep enabled so the public Services page can load these settings."
+                  description="Keep enabled so the public page can load these settings."
                   checked={formData.is_active}
                   onChange={(checked) => updateField("is_active", checked)}
                 />
@@ -738,31 +732,55 @@ export default function AdminServicesPage() {
                   onChange={(checked) => updateField("show_cta", checked)}
                 />
               </div>
-            </div>
+            </FormCard>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <h2 className="font-bold text-slate-900">Individual Services</h2>
+            <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                  <Eye className="size-5" />
+                </div>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Service cards and service detail content are managed separately
-                from the Services menu in the admin sidebar.
-              </p>
-            </div>
+                <div>
+                  <h2 className="font-extrabold text-slate-950">
+                    Page overview
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {visibleSectionCount} of 7 optional page sections are
+                    currently visible.
+                  </p>
+                </div>
+              </div>
+            </section>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-              <h2 className="font-bold text-slate-900">
-                Static Section Records
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+
+                <div>
+                  <h2 className="font-extrabold text-slate-950">
+                    Individual services
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Service cards and service-detail content are managed
+                    separately from the Services menu in the admin sidebar.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <h2 className="font-extrabold text-slate-950">
+                Static section records
               </h2>
-
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Benefit cards, process steps, statistics and industry cards
+                Benefit cards, process steps, statistics, and industry cards
                 still use their existing frontend data. This editor controls
                 their headings and visibility.
               </p>
-            </div>
-          </aside>
+            </section>
+          </div>
         </div>
-      </section>
+      </div>
     </>
   )
 }
@@ -783,28 +801,26 @@ function trimServicesPageData(
   return trimmed
 }
 
-type PanelProps = {
+type SectionCardProps = {
   icon: ReactNode
   title: string
   description: string
   children: ReactNode
 }
 
-function Panel({ icon, title, description, children }: PanelProps) {
+function SectionCard({ icon, title, description, children }: SectionCardProps) {
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-blue-50 p-2.5 text-blue-600">{icon}</div>
-
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
+    <FormCard
+      title={title}
+      description={description}
+      action={
+        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          {icon}
         </div>
-      </div>
-
-      <div className="mt-6 space-y-5">{children}</div>
-    </div>
+      }
+    >
+      <div className="space-y-5">{children}</div>
+    </FormCard>
   )
 }
 
@@ -862,27 +878,6 @@ function TextAreaField({
   )
 }
 
-type FormFieldProps = {
-  id: string
-  label: string
-  required?: boolean
-  children: ReactNode
-}
-
-function FormField({ id, label, required = false, children }: FormFieldProps) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-
-        {required && <span className="text-red-600"> *</span>}
-      </label>
-
-      {children}
-    </div>
-  )
-}
-
 type ToggleFieldProps = {
   title: string
   description: string
@@ -897,38 +892,27 @@ function ToggleField({
   onChange,
 }: ToggleFieldProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:bg-slate-50">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4"
-      />
-
+    <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-slate-300 hover:bg-slate-50">
       <span>
-        <span className="block font-semibold text-slate-900">{title}</span>
-
+        <span className="block text-sm font-bold text-slate-950">{title}</span>
         <span className="mt-1 block text-sm leading-6 text-slate-500">
           {description}
         </span>
+      </span>
+
+      <span className="relative mt-1 inline-flex shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          className="peer sr-only"
+        />
+        <span className="h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-blue-600 peer-focus-visible:ring-4 peer-focus-visible:ring-blue-100" />
+        <span className="absolute top-1 left-1 size-4 rounded-full bg-white shadow-sm transition peer-checked:translate-x-5" />
       </span>
     </label>
   )
 }
 
-function CharacterCount({
-  current,
-  maximum,
-}: {
-  current: number
-  maximum: number
-}) {
-  return (
-    <p className="-mt-3 text-right text-xs text-slate-500">
-      {current}/{maximum}
-    </p>
-  )
-}
-
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
