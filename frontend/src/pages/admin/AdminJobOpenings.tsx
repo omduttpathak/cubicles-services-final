@@ -4,11 +4,17 @@ import {
   ArrowDown,
   ArrowUp,
   BriefcaseBusiness,
+  CheckCircle2,
+  FileText,
+  Filter,
+  MapPin,
   Pencil,
   Plus,
   Save,
   Search,
+  Sparkles,
   Trash2,
+  Users,
   X,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -22,6 +28,9 @@ import {
   type AdminJobOpening,
   type JobOpeningRequest,
 } from "@/api/adminJobOpeningsApi"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
@@ -62,6 +71,7 @@ export default function AdminJobOpenings() {
   const [hasError, setHasError] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOrdering, setIsOrdering] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   async function loadJobOpenings() {
     try {
@@ -104,6 +114,23 @@ export default function AdminJobOpenings() {
   const activeCount = jobs.filter((job) => job.is_active).length
   const inactiveCount = jobs.length - activeCount
 
+  const requiredChecks = useMemo(
+    () => [
+      formData.title.trim().length > 0,
+      formData.slug.trim().length > 0,
+      formData.location.trim().length > 0,
+      formData.employment_type.trim().length > 0,
+      formData.experience.trim().length > 0,
+      formData.short_description.trim().length > 0,
+    ],
+    [formData]
+  )
+
+  const completedRequiredFields = requiredChecks.filter(Boolean).length
+  const completionPercentage = Math.round(
+    (completedRequiredFields / requiredChecks.length) * 100
+  )
+
   function updateField<Key extends keyof JobOpeningFormState>(
     field: Key,
     value: JobOpeningFormState[Key]
@@ -128,10 +155,12 @@ export default function AdminJobOpenings() {
   function resetForm() {
     setFormData(initialFormData)
     setEditingId(null)
+    setFormError(null)
   }
 
   function startEditing(job: AdminJobOpening) {
     setEditingId(job.id)
+    setFormError(null)
 
     setFormData({
       title: job.title,
@@ -155,6 +184,12 @@ export default function AdminJobOpenings() {
   }
 
   async function handleSubmit() {
+    if (isSubmitting) {
+      return
+    }
+
+    setFormError(null)
+
     if (
       !formData.title.trim() ||
       !formData.slug.trim() ||
@@ -163,14 +198,18 @@ export default function AdminJobOpenings() {
       !formData.experience.trim() ||
       !formData.short_description.trim()
     ) {
-      toast.error("Please complete all required job-opening fields.")
+      const message = "Please complete all required job-opening fields."
+      setFormError(message)
+      toast.error(message)
       return
     }
 
     const slug = createSlug(formData.slug)
 
     if (!slug) {
-      toast.error("Please enter a valid slug.")
+      const message = "Please enter a valid slug."
+      setFormError(message)
+      toast.error(message)
       return
     }
 
@@ -215,29 +254,13 @@ export default function AdminJobOpenings() {
     } catch (error) {
       console.error(error)
 
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail
+      const message = getApiErrorMessage(
+        error,
+        "Unable to save the job opening."
+      )
 
-        if (typeof detail === "string") {
-          toast.error(detail)
-        } else if (Array.isArray(detail) && detail.length > 0) {
-          const message = detail
-            .map((item) => {
-              const field = Array.isArray(item?.loc)
-                ? item.loc.filter((part: unknown) => part !== "body").join(".")
-                : "field"
-
-              return `${field}: ${item?.msg || "Please check this value."}`
-            })
-            .join(" | ")
-
-          toast.error(message)
-        } else {
-          toast.error("Unable to save the job opening.")
-        }
-      } else {
-        toast.error("Unable to save the job opening.")
-      }
+      setFormError(message)
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -277,17 +300,9 @@ export default function AdminJobOpenings() {
     } catch (error) {
       console.error(error)
 
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail
-
-        toast.error(
-          typeof detail === "string"
-            ? detail
-            : "Unable to delete the job opening."
-        )
-      } else {
-        toast.error("Unable to delete the job opening.")
-      }
+      toast.error(
+        getApiErrorMessage(error, "Unable to delete the job opening.")
+      )
 
       void loadJobOpenings()
     } finally {
@@ -360,318 +375,370 @@ export default function AdminJobOpenings() {
         description="Manage public job openings and career opportunities."
       />
 
-      <section>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="font-semibold tracking-wider text-blue-600 uppercase">
-            Careers Management
-          </p>
+      <section className="space-y-6">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.25),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.18),transparent_40%)]" />
 
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            Job Openings
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-600">
-            Add, edit, reorder, hide and remove the positions displayed on the
-            public Careers page.
-          </p>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <SummaryCard label="Total Openings" value={jobs.length} />
-          <SummaryCard label="Active" value={activeCount} />
-          <SummaryCard label="Inactive" value={inactiveCount} />
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[430px_minmax(0,1fr)]">
-          <div className="h-fit rounded-xl bg-white p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {editingId === null ? "Add Job Opening" : "Edit Job Opening"}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  {editingId === null
-                    ? "Create a new public career opportunity."
-                    : "Update the selected career opportunity."}
-                </p>
+          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-[0.16em] text-blue-200 uppercase backdrop-blur">
+                <Sparkles className="size-3.5" />
+                Careers Management
               </div>
 
-              {editingId !== null && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  title="Cancel editing"
-                  aria-label="Cancel editing"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+              <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
+                Job Openings
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                Add, edit, reorder, hide, and remove the positions displayed on
+                the public Careers page.
+              </p>
             </div>
 
-            <div className="mt-6 space-y-5">
-              <FormField id="job-title" label="Job Title" required>
-                <input
-                  id="job-title"
-                  type="text"
-                  maxLength={150}
-                  value={formData.title}
-                  onChange={(event) => handleTitleChange(event.target.value)}
-                  placeholder="DevOps Engineer"
-                  className={inputClassName}
-                />
-              </FormField>
+            <button
+              type="button"
+              onClick={() => {
+                resetForm()
+                window.scrollTo({ top: 0, behavior: "smooth" })
+              }}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100"
+            >
+              <Plus className="size-4" />
+              Add Job Opening
+            </button>
+          </div>
+        </div>
 
-              <FormField id="job-slug" label="Slug" required>
-                <input
-                  id="job-slug"
-                  type="text"
-                  maxLength={180}
-                  value={formData.slug}
-                  onChange={(event) =>
-                    updateField("slug", createSlug(event.target.value))
-                  }
-                  placeholder="devops-engineer"
-                  className={inputClassName}
-                />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <SummaryCard
+            label="Total Openings"
+            value={jobs.length}
+            description="All career opportunities"
+            icon={<BriefcaseBusiness className="size-5" />}
+          />
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Lowercase letters, numbers and hyphens only.
-                </p>
-              </FormField>
+          <SummaryCard
+            label="Active"
+            value={activeCount}
+            description="Visible on the Careers page"
+            icon={<CheckCircle2 className="size-5" />}
+            tone="success"
+          />
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <FormField id="job-location" label="Location" required>
+          <SummaryCard
+            label="Inactive"
+            value={inactiveCount}
+            description="Hidden from public visitors"
+            icon={<FileText className="size-5" />}
+            tone="neutral"
+          />
+        </div>
+
+        {formError && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700 shadow-sm"
+          >
+            {formError}
+          </div>
+        )}
+
+        <div className="grid gap-6 2xl:grid-cols-[460px_minmax(0,1fr)]">
+          <aside className="h-fit 2xl:sticky 2xl:top-24">
+            <FormCard
+              title={
+                editingId === null ? "Add Job Opening" : "Edit Job Opening"
+              }
+              description={
+                editingId === null
+                  ? "Create a new public career opportunity."
+                  : "Update the selected career opportunity."
+              }
+              action={
+                editingId !== null ? (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    title="Cancel editing"
+                    aria-label="Cancel editing"
+                    className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                  >
+                    <X className="size-4" />
+                  </button>
+                ) : (
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <BriefcaseBusiness className="size-5" />
+                  </div>
+                )
+              }
+            >
+              <div className="space-y-5">
+                <FormField id="job-title" label="Job Title" required>
                   <input
-                    id="job-location"
+                    id="job-title"
                     type="text"
                     maxLength={150}
-                    value={formData.location}
-                    onChange={(event) =>
-                      updateField("location", event.target.value)
-                    }
-                    placeholder="New Delhi / Remote"
+                    value={formData.title}
+                    onChange={(event) => handleTitleChange(event.target.value)}
+                    placeholder="DevOps Engineer"
                     className={inputClassName}
+                    disabled={isSubmitting}
                   />
                 </FormField>
 
                 <FormField
-                  id="job-employment-type"
-                  label="Employment Type"
+                  id="job-slug"
+                  label="Slug"
+                  required
+                  description={`Public URL: /careers/${
+                    formData.slug || "job-opening-slug"
+                  }`}
+                >
+                  <input
+                    id="job-slug"
+                    type="text"
+                    maxLength={180}
+                    value={formData.slug}
+                    onChange={(event) =>
+                      updateField("slug", createSlug(event.target.value))
+                    }
+                    placeholder="devops-engineer"
+                    className={`${inputClassName} font-mono text-sm`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <FormField id="job-location" label="Location" required>
+                    <input
+                      id="job-location"
+                      type="text"
+                      maxLength={150}
+                      value={formData.location}
+                      onChange={(event) =>
+                        updateField("location", event.target.value)
+                      }
+                      placeholder="New Delhi / Remote"
+                      className={inputClassName}
+                      disabled={isSubmitting}
+                    />
+                  </FormField>
+
+                  <FormField
+                    id="job-employment-type"
+                    label="Employment Type"
+                    required
+                  >
+                    <select
+                      id="job-employment-type"
+                      value={formData.employment_type}
+                      onChange={(event) =>
+                        updateField("employment_type", event.target.value)
+                      }
+                      className={inputClassName}
+                      disabled={isSubmitting}
+                    >
+                      <option value="Full Time">Full Time</option>
+                      <option value="Part Time">Part Time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Internship">Internship</option>
+                      <option value="Temporary">Temporary</option>
+                    </select>
+                  </FormField>
+                </div>
+
+                <FormField id="job-experience" label="Experience" required>
+                  <input
+                    id="job-experience"
+                    type="text"
+                    maxLength={100}
+                    value={formData.experience}
+                    onChange={(event) =>
+                      updateField("experience", event.target.value)
+                    }
+                    placeholder="3-5 Years"
+                    className={inputClassName}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+
+                <FormField
+                  id="job-short-description"
+                  label="Short Description"
                   required
                 >
-                  <select
-                    id="job-employment-type"
-                    value={formData.employment_type}
+                  <textarea
+                    id="job-short-description"
+                    rows={5}
+                    maxLength={1000}
+                    value={formData.short_description}
                     onChange={(event) =>
-                      updateField("employment_type", event.target.value)
+                      updateField("short_description", event.target.value)
                     }
-                    className={inputClassName}
-                  >
-                    <option value="Full Time">Full Time</option>
-                    <option value="Part Time">Part Time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Internship">Internship</option>
-                    <option value="Temporary">Temporary</option>
-                  </select>
+                    placeholder="A concise summary displayed on the Careers page."
+                    className={`${inputClassName} leading-7`}
+                    disabled={isSubmitting}
+                  />
+
+                  <CharacterCount
+                    current={formData.short_description.length}
+                    maximum={1000}
+                  />
                 </FormField>
-              </div>
 
-              <FormField id="job-experience" label="Experience" required>
-                <input
-                  id="job-experience"
-                  type="text"
-                  maxLength={100}
-                  value={formData.experience}
-                  onChange={(event) =>
-                    updateField("experience", event.target.value)
-                  }
-                  placeholder="3-5 Years"
-                  className={inputClassName}
-                />
-              </FormField>
+                <FormField id="job-description" label="Full Description">
+                  <textarea
+                    id="job-description"
+                    rows={6}
+                    value={formData.description ?? ""}
+                    onChange={(event) =>
+                      updateField("description", event.target.value || null)
+                    }
+                    placeholder="Describe the role in more detail."
+                    className={`${inputClassName} leading-7`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
 
-              <FormField
-                id="job-short-description"
-                label="Short Description"
-                required
-              >
-                <textarea
-                  id="job-short-description"
-                  rows={5}
-                  maxLength={1000}
-                  value={formData.short_description}
-                  onChange={(event) =>
-                    updateField("short_description", event.target.value)
-                  }
-                  placeholder="A concise summary displayed on the Careers page."
-                  className={`${inputClassName} leading-7`}
-                />
-
-                <CharacterCount
-                  current={formData.short_description.length}
-                  maximum={1000}
-                />
-              </FormField>
-
-              <FormField id="job-description" label="Full Description">
-                <textarea
-                  id="job-description"
-                  rows={7}
-                  value={formData.description ?? ""}
-                  onChange={(event) =>
-                    updateField("description", event.target.value || null)
-                  }
-                  placeholder="Describe the role in more detail."
-                  className={`${inputClassName} leading-7`}
-                />
-              </FormField>
-
-              <FormField id="job-responsibilities" label="Responsibilities">
-                <textarea
+                <FormField
                   id="job-responsibilities"
-                  rows={7}
-                  value={formData.responsibilitiesText}
-                  onChange={(event) =>
-                    updateField("responsibilitiesText", event.target.value)
-                  }
-                  placeholder={`Enter one responsibility per line.\nDesign CI/CD pipelines\nManage Kubernetes platforms`}
-                  className={`${inputClassName} leading-7`}
-                />
+                  label="Responsibilities"
+                  description="Enter one responsibility per line."
+                >
+                  <textarea
+                    id="job-responsibilities"
+                    rows={6}
+                    value={formData.responsibilitiesText}
+                    onChange={(event) =>
+                      updateField("responsibilitiesText", event.target.value)
+                    }
+                    placeholder={`Design CI/CD pipelines\nManage Kubernetes platforms`}
+                    className={`${inputClassName} leading-7`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Enter one responsibility per line.
-                </p>
-              </FormField>
-
-              <FormField id="job-requirements" label="Requirements">
-                <textarea
+                <FormField
                   id="job-requirements"
-                  rows={7}
-                  value={formData.requirementsText}
-                  onChange={(event) =>
-                    updateField("requirementsText", event.target.value)
-                  }
-                  placeholder={`Enter one requirement per line.\nAWS or Azure experience\nStrong Linux knowledge`}
-                  className={`${inputClassName} leading-7`}
-                />
+                  label="Requirements"
+                  description="Enter one requirement per line."
+                >
+                  <textarea
+                    id="job-requirements"
+                    rows={6}
+                    value={formData.requirementsText}
+                    onChange={(event) =>
+                      updateField("requirementsText", event.target.value)
+                    }
+                    placeholder={`AWS or Azure experience\nStrong Linux knowledge`}
+                    className={`${inputClassName} leading-7`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Enter one requirement per line.
-                </p>
-              </FormField>
-
-              <FormField id="job-skills" label="Skills">
-                <textarea
+                <FormField
                   id="job-skills"
-                  rows={4}
-                  value={formData.skillsText}
-                  onChange={(event) =>
-                    updateField("skillsText", event.target.value)
-                  }
-                  placeholder="AWS, Azure, Docker, Kubernetes, Terraform"
-                  className={`${inputClassName} leading-7`}
-                />
+                  label="Skills"
+                  description="Separate skills with commas or new lines."
+                >
+                  <textarea
+                    id="job-skills"
+                    rows={4}
+                    value={formData.skillsText}
+                    onChange={(event) =>
+                      updateField("skillsText", event.target.value)
+                    }
+                    placeholder="AWS, Azure, Docker, Kubernetes, Terraform"
+                    className={`${inputClassName} leading-7`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Separate skills with commas or new lines.
-                </p>
-              </FormField>
-
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                <p className="font-semibold text-slate-900">Display Position</p>
-
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  New openings are added at the bottom. Use the arrow buttons
-                  beside existing openings to change their order.
-                </p>
-              </div>
-
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:bg-slate-50">
-                <input
-                  type="checkbox"
+                <ToggleField
+                  title="Active"
+                  description="Active openings appear on the public Careers page."
                   checked={formData.is_active}
-                  onChange={(event) =>
-                    updateField("is_active", event.target.checked)
-                  }
-                  className="mt-1 h-4 w-4"
+                  disabled={isSubmitting}
+                  onChange={(checked) => updateField("is_active", checked)}
                 />
 
-                <span>
-                  <span className="block font-semibold text-slate-900">
-                    Active
-                  </span>
-
-                  <span className="mt-1 block text-sm leading-6 text-slate-500">
-                    Active openings appear on the public Careers page.
-                  </span>
-                </span>
-              </label>
-
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => {
-                  void handleSubmit()
-                }}
-                className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {editingId === null ? (
-                  <Plus className="mr-2 h-4 w-4" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-
-                {isSubmitting
-                  ? "Saving..."
-                  : editingId === null
-                    ? "Add Job Opening"
-                    : "Save Changes"}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Existing Job Openings
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  {jobs.length} total openings
-                </p>
-              </div>
-
-              <div className="relative w-full sm:max-w-sm">
-                <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-400" />
-
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search job openings..."
-                  className="w-full rounded-xl border border-slate-300 bg-white py-3 pr-4 pl-12 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                <CompletionPanel
+                  completed={completedRequiredFields}
+                  total={requiredChecks.length}
+                  percentage={completionPercentage}
+                  isActive={formData.is_active}
                 />
-              </div>
-            </div>
 
-            {searchTerm.trim() && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Clear the search field to reorder job openings.
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    void handleSubmit()
+                  }}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {editingId === null ? (
+                    <Plus className="mr-2 size-4" />
+                  ) : (
+                    <Save className="mr-2 size-4" />
+                  )}
+
+                  {isSubmitting
+                    ? "Saving..."
+                    : editingId === null
+                      ? "Add Job Opening"
+                      : "Save Changes"}
+                </button>
               </div>
-            )}
+            </FormCard>
+          </aside>
+
+          <div className="min-w-0">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-950">
+                    Existing Job Openings
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    {jobs.length} total openings
+                  </p>
+                </div>
+
+                <div className="relative w-full xl:max-w-md">
+                  <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
+
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search job openings..."
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pr-4 pl-11 text-sm text-slate-900 transition outline-none placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              {searchTerm.trim() && (
+                <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <Filter className="size-4 shrink-0" />
+                  Clear the search field to reorder job openings.
+                </div>
+              )}
+            </div>
 
             {filteredJobs.length === 0 ? (
-              <div className="mt-4 rounded-xl bg-white px-6 py-16 text-center shadow-sm">
-                <BriefcaseBusiness className="mx-auto h-12 w-12 text-slate-400" />
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
+                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                  <BriefcaseBusiness className="size-7" />
+                </div>
 
-                <h2 className="mt-5 text-2xl font-bold text-slate-900">
+                <h2 className="mt-5 text-xl font-bold text-slate-950">
                   No Job Openings Found
                 </h2>
 
-                <p className="mt-3 text-slate-600">
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
                   {searchTerm
                     ? "No job openings match your search."
                     : "Create your first job opening."}
@@ -692,69 +759,40 @@ export default function AdminJobOpenings() {
                   return (
                     <article
                       key={job.id}
-                      className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-6"
                     >
-                      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-xl font-bold text-slate-900">
+                            <h3 className="text-xl font-bold text-slate-950">
                               {job.title}
                             </h3>
 
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                job.is_active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {job.is_active ? "Active" : "Inactive"}
-                            </span>
+                            <StatusBadge isActive={job.is_active} />
                           </div>
 
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="mt-1 truncate text-xs text-slate-500">
                             /{job.slug}
                           </p>
 
-                          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-slate-600">
-                            <span>{job.location}</span>
-                            <span>{job.employment_type}</span>
-                            <span>{job.experience}</span>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <MetaBadge
+                              icon={<MapPin className="size-3.5" />}
+                              text={job.location}
+                            />
 
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-700">
-                                Position {job.display_order}
-                              </span>
+                            <MetaBadge
+                              icon={<BriefcaseBusiness className="size-3.5" />}
+                              text={job.employment_type}
+                            />
 
-                              <button
-                                type="button"
-                                disabled={orderingDisabled || isFirst}
-                                onClick={() => {
-                                  void moveJob(job.id, "up")
-                                }}
-                                title="Move job opening up"
-                                aria-label={`Move ${job.title} up`}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-30"
-                              >
-                                <ArrowUp className="h-4 w-4" />
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={orderingDisabled || isLast}
-                                onClick={() => {
-                                  void moveJob(job.id, "down")
-                                }}
-                                title="Move job opening down"
-                                aria-label={`Move ${job.title} down`}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-30"
-                              >
-                                <ArrowDown className="h-4 w-4" />
-                              </button>
-                            </div>
+                            <MetaBadge
+                              icon={<Users className="size-3.5" />}
+                              text={job.experience}
+                            />
                           </div>
 
-                          <p className="mt-4 line-clamp-3 leading-7 text-slate-600">
+                          <p className="mt-4 line-clamp-3 text-sm leading-7 text-slate-600">
                             {job.short_description}
                           </p>
 
@@ -763,13 +801,45 @@ export default function AdminJobOpenings() {
                               {job.skills.map((skill) => (
                                 <span
                                   key={skill}
-                                  className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
+                                  className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100 ring-inset"
                                 >
                                   {skill}
                                 </span>
                               ))}
                             </div>
                           )}
+
+                          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+                            <span className="text-sm font-semibold text-slate-700">
+                              Position {job.display_order}
+                            </span>
+
+                            <button
+                              type="button"
+                              disabled={orderingDisabled || isFirst}
+                              onClick={() => {
+                                void moveJob(job.id, "up")
+                              }}
+                              title="Move job opening up"
+                              aria-label={`Move ${job.title} up`}
+                              className={orderButtonClassName}
+                            >
+                              <ArrowUp className="size-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={orderingDisabled || isLast}
+                              onClick={() => {
+                                void moveJob(job.id, "down")
+                              }}
+                              title="Move job opening down"
+                              aria-label={`Move ${job.title} down`}
+                              className={orderButtonClassName}
+                            >
+                              <ArrowDown className="size-4" />
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex shrink-0 gap-2">
@@ -778,9 +848,9 @@ export default function AdminJobOpenings() {
                             onClick={() => startEditing(job)}
                             title="Edit job opening"
                             aria-label={`Edit ${job.title}`}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50"
+                            className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="size-4" />
                           </button>
 
                           <button
@@ -791,9 +861,9 @@ export default function AdminJobOpenings() {
                             }}
                             title="Delete job opening"
                             aria-label={`Delete ${job.title}`}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex size-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-4" />
                           </button>
                         </div>
                       </div>
@@ -809,48 +879,172 @@ export default function AdminJobOpenings() {
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-    </div>
-  )
-}
-
-type FormFieldProps = {
-  id: string
-  label: string
-  required?: boolean
-  children: ReactNode
-}
-
-function FormField({ id, label, required = false, children }: FormFieldProps) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-
-        {required && <span className="text-red-600"> *</span>}
-      </label>
-
-      {children}
-    </div>
-  )
-}
-
-function CharacterCount({
-  current,
-  maximum,
+function SummaryCard({
+  label,
+  value,
+  description,
+  icon,
+  tone = "default",
 }: {
-  current: number
-  maximum: number
+  label: string
+  value: number
+  description: string
+  icon: ReactNode
+  tone?: "default" | "success" | "neutral"
+}) {
+  const toneClasses = {
+    default: "bg-blue-50 text-blue-700",
+    success: "bg-emerald-50 text-emerald-700",
+    neutral: "bg-slate-100 text-slate-700",
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+
+          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            {value}
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+        </div>
+
+        <div className={`rounded-xl p-3 ${toneClasses[tone]}`}>{icon}</div>
+      </div>
+    </div>
+  )
+}
+
+function ToggleField({
+  title,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  title: string
+  description: string
+  checked: boolean
+  disabled: boolean
+  onChange: (checked: boolean) => void
 }) {
   return (
-    <p className="mt-1 text-right text-xs text-slate-500">
-      {current}/{maximum}
-    </p>
+    <label
+      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+        checked
+          ? "border-blue-200 bg-blue-50/70"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="sr-only"
+      />
+
+      <span
+        aria-hidden="true"
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-blue-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
+
+      <span>
+        <span className="block text-sm font-extrabold text-slate-950">
+          {title}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          {description}
+        </span>
+      </span>
+    </label>
+  )
+}
+
+function CompletionPanel({
+  completed,
+  total,
+  percentage,
+  isActive,
+}: {
+  completed: number
+  total: number
+  percentage: number
+  isActive: boolean
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-extrabold text-slate-950">
+            Form completion
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            {completed} of {total} required fields completed
+          </p>
+        </div>
+
+        <span className="text-sm font-black text-blue-700">{percentage}%</span>
+      </div>
+
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div
+        className={`mt-4 rounded-xl border px-3 py-2 text-xs font-bold ${
+          isActive
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            : "border-amber-200 bg-amber-50 text-amber-700"
+        }`}
+      >
+        {isActive ? "Opening will be visible" : "Opening will remain hidden"}
+      </div>
+    </div>
+  )
+}
+
+function StatusBadge({ isActive }: { isActive: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${
+        isActive
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          : "bg-red-50 text-red-700 ring-red-200"
+      }`}
+    >
+      <span
+        className={`size-1.5 rounded-full ${
+          isActive ? "bg-emerald-500" : "bg-red-500"
+        }`}
+      />
+
+      {isActive ? "Active" : "Inactive"}
+    </span>
+  )
+}
+
+function MetaBadge({ icon, text }: { icon: ReactNode; text: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 ring-inset">
+      {icon}
+      {text}
+    </span>
   )
 }
 
@@ -902,5 +1096,34 @@ function sortJobs(jobs: AdminJobOpening[]): AdminJobOpening[] {
   )
 }
 
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!axios.isAxiosError(error)) {
+    return fallback
+  }
+
+  const detail = error.response?.data?.detail
+
+  if (typeof detail === "string") {
+    return detail
+  }
+
+  if (!Array.isArray(detail) || detail.length === 0) {
+    return fallback
+  }
+
+  return detail
+    .map((item) => {
+      const field = Array.isArray(item?.loc)
+        ? item.loc.filter((part: unknown) => part !== "body").join(".")
+        : "field"
+
+      return `${field}: ${item?.msg || "Please check this value."}`
+    })
+    .join(" | ")
+}
+
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+
+const orderButtonClassName =
+  "inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-30"

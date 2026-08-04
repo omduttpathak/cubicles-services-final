@@ -1,12 +1,28 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
   type RefObject,
 } from "react"
 import axios from "axios"
-import { Globe2, ImageUp, LoaderCircle, Save, Trash2 } from "lucide-react"
+import {
+  Building2,
+  CheckCircle2,
+  Globe2,
+  ImageUp,
+  Link2,
+  LoaderCircle,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Settings2,
+  Sparkles,
+  Trash2,
+} from "lucide-react"
+
 import { toast } from "sonner"
 
 import {
@@ -15,6 +31,10 @@ import {
   type SiteSettingsRequest,
 } from "@/api/adminSiteSettingsApi"
 import { uploadAdminImage } from "@/api/adminUploadsApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
@@ -41,6 +61,7 @@ const acceptedFaviconTypes = ".png,.jpg,.jpeg,.webp,.svg,.ico"
 
 export default function AdminSiteSettings() {
   const [formData, setFormData] = useState<SiteSettingsRequest>(initialFormData)
+
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -205,6 +226,31 @@ export default function AdminSiteSettings() {
     void loadSettings()
   }, [])
 
+  const completedFields = useMemo(
+    () =>
+      [
+        formData.company_name.trim(),
+        formData.contact_email.trim(),
+        formData.footer_description.trim(),
+        formData.copyright_text.trim(),
+      ].filter(Boolean).length,
+    [formData]
+  )
+
+  const socialCount = useMemo(
+    () =>
+      [
+        formData.linkedin_url,
+        formData.facebook_url,
+        formData.twitter_url,
+        formData.youtube_url,
+      ].filter((value) => Boolean(value?.trim())).length,
+    [formData]
+  )
+
+  const completionPercentage = Math.round((completedFields / 4) * 100)
+  const isBusy = isSubmitting || isUploadingLogo || isUploadingFavicon
+
   if (isLoading) {
     return <PageLoader message="Loading site settings..." />
   }
@@ -228,123 +274,185 @@ export default function AdminSiteSettings() {
         description="Manage global Cubicles Services website settings."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold tracking-wider text-blue-600 uppercase">
-              Global Settings
-            </p>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Global settings"
+          title="Site Settings"
+          description="Manage branding, contact information, footer content, social links, and public availability."
+          backLabel="Back to Dashboard"
+          onBack={() => window.history.back()}
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={isBusy}
+          onSubmit={() => {
+            void handleSubmit()
+          }}
+        />
 
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Site Settings
-            </h1>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Brand Assets"
+            value={
+              [formData.logo_url, formData.favicon_url].filter(Boolean).length
+            }
+            description="Logo and favicon configured"
+            icon={<ImageUp className="size-5" />}
+          />
 
-            <p className="mt-1 text-sm text-slate-600">
-              Manage branding, contact information, footer content and social
-              links.
-            </p>
-          </div>
+          <SummaryCard
+            label="Contact Channels"
+            value={
+              [formData.contact_email, formData.contact_phone].filter((value) =>
+                Boolean(value?.trim())
+              ).length
+            }
+            description="Email and phone availability"
+            icon={<Mail className="size-5" />}
+            tone="success"
+          />
 
-          <button
-            type="button"
-            disabled={isSubmitting || isUploadingLogo || isUploadingFavicon}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
+          <SummaryCard
+            label="Social Profiles"
+            value={socialCount}
+            description="Connected social destinations"
+            icon={<Globe2 className="size-5" />}
+            tone="featured"
+          />
+
+          <SummaryCard
+            label="Configuration"
+            value={completionPercentage}
+            suffix="%"
+            description="Required fields completed"
+            icon={<CheckCircle2 className="size-5" />}
+            tone="neutral"
+          />
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <Panel
+            <SectionCard
+              icon={<Building2 className="size-5" />}
               title="Branding"
               description="Company identity shown in the header and browser."
             >
               <FormField id="company-name" label="Company Name" required>
                 <input
                   id="company-name"
+                  maxLength={150}
                   value={formData.company_name}
                   onChange={(event) =>
                     updateField("company_name", event.target.value)
                   }
                   className={inputClassName}
+                  disabled={isBusy}
+                />
+
+                <CharacterCount
+                  current={formData.company_name.length}
+                  maximum={150}
                 />
               </FormField>
 
-              <ImageUploadField
-                id="site-logo"
-                label="Company Logo"
-                value={formData.logo_url}
-                accept={acceptedLogoTypes}
-                isUploading={isUploadingLogo}
-                inputRef={logoInputRef}
-                onFileSelected={(file) => {
-                  void handleImageUpload(file, "logo_url")
-                }}
-                onRemove={() => updateField("logo_url", null)}
-              />
+              <div className="grid gap-5 lg:grid-cols-2">
+                <ImageUploadField
+                  id="site-logo"
+                  label="Company Logo"
+                  value={formData.logo_url}
+                  accept={acceptedLogoTypes}
+                  isUploading={isUploadingLogo}
+                  inputRef={logoInputRef}
+                  onFileSelected={(file) => {
+                    void handleImageUpload(file, "logo_url")
+                  }}
+                  onRemove={() => updateField("logo_url", null)}
+                />
 
-              <ImageUploadField
-                id="site-favicon"
-                label="Favicon"
-                value={formData.favicon_url}
-                accept={acceptedFaviconTypes}
-                isUploading={isUploadingFavicon}
-                inputRef={faviconInputRef}
-                onFileSelected={(file) => {
-                  void handleImageUpload(file, "favicon_url")
-                }}
-                onRemove={() => updateField("favicon_url", null)}
-                compactPreview
-              />
-            </Panel>
+                <ImageUploadField
+                  id="site-favicon"
+                  label="Favicon"
+                  value={formData.favicon_url}
+                  accept={acceptedFaviconTypes}
+                  isUploading={isUploadingFavicon}
+                  inputRef={faviconInputRef}
+                  onFileSelected={(file) => {
+                    void handleImageUpload(file, "favicon_url")
+                  }}
+                  onRemove={() => updateField("favicon_url", null)}
+                  compactPreview
+                />
+              </div>
+            </SectionCard>
 
-            <Panel
-              title="Contact Information"
+            <SectionCard
+              icon={<Mail className="size-5" />}
+              title="Contact information"
               description="Public contact details shown in the footer."
             >
-              <FormField id="contact-email" label="Contact Email" required>
-                <input
-                  id="contact-email"
-                  type="email"
-                  value={formData.contact_email}
-                  onChange={(event) =>
-                    updateField("contact_email", event.target.value)
-                  }
-                  className={inputClassName}
-                />
-              </FormField>
+              <div className="grid gap-5 md:grid-cols-2">
+                <FormField id="contact-email" label="Contact Email" required>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
 
-              <FormField id="contact-phone" label="Contact Phone">
-                <input
-                  id="contact-phone"
-                  value={formData.contact_phone ?? ""}
-                  onChange={(event) =>
-                    updateField("contact_phone", event.target.value || null)
-                  }
-                  className={inputClassName}
-                />
-              </FormField>
+                    <input
+                      id="contact-email"
+                      type="email"
+                      maxLength={255}
+                      value={formData.contact_email}
+                      onChange={(event) =>
+                        updateField("contact_email", event.target.value)
+                      }
+                      className={`${inputClassName} pl-11`}
+                      disabled={isBusy}
+                    />
+                  </div>
+                </FormField>
+
+                <FormField id="contact-phone" label="Contact Phone">
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
+
+                    <input
+                      id="contact-phone"
+                      maxLength={100}
+                      value={formData.contact_phone ?? ""}
+                      onChange={(event) =>
+                        updateField("contact_phone", event.target.value || null)
+                      }
+                      className={`${inputClassName} pl-11`}
+                      disabled={isBusy}
+                    />
+                  </div>
+                </FormField>
+              </div>
 
               <FormField id="address" label="Address">
-                <textarea
-                  id="address"
-                  rows={4}
-                  value={formData.address ?? ""}
-                  onChange={(event) =>
-                    updateField("address", event.target.value || null)
-                  }
-                  className={`${inputClassName} leading-7`}
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute top-4 left-4 size-4 text-slate-400" />
+
+                  <textarea
+                    id="address"
+                    rows={4}
+                    maxLength={500}
+                    value={formData.address ?? ""}
+                    onChange={(event) =>
+                      updateField("address", event.target.value || null)
+                    }
+                    className={`${inputClassName} pl-11 leading-7`}
+                    disabled={isBusy}
+                  />
+                </div>
+
+                <CharacterCount
+                  current={(formData.address ?? "").length}
+                  maximum={500}
                 />
               </FormField>
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              title="Footer Content"
+            <SectionCard
+              icon={<Settings2 className="size-5" />}
+              title="Footer content"
               description="Text displayed in the public website footer."
             >
               <FormField
@@ -355,112 +463,176 @@ export default function AdminSiteSettings() {
                 <textarea
                   id="footer-description"
                   rows={5}
+                  maxLength={1000}
                   value={formData.footer_description}
                   onChange={(event) =>
                     updateField("footer_description", event.target.value)
                   }
                   className={`${inputClassName} leading-7`}
+                  disabled={isBusy}
+                />
+
+                <CharacterCount
+                  current={formData.footer_description.length}
+                  maximum={1000}
                 />
               </FormField>
 
               <FormField id="copyright" label="Copyright Text" required>
                 <input
                   id="copyright"
+                  maxLength={255}
                   value={formData.copyright_text}
                   onChange={(event) =>
                     updateField("copyright_text", event.target.value)
                   }
                   className={inputClassName}
+                  disabled={isBusy}
+                />
+
+                <CharacterCount
+                  current={formData.copyright_text.length}
+                  maximum={255}
                 />
               </FormField>
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              title="Social Links"
+            <SectionCard
+              icon={<Globe2 className="size-5" />}
+              title="Social links"
               description="Optional social profiles displayed in the footer."
             >
-              <OptionalUrlField
-                id="linkedin"
-                label="LinkedIn URL"
-                value={formData.linkedin_url}
-                onChange={(value) => updateField("linkedin_url", value)}
-              />
+              <div className="grid gap-5 md:grid-cols-2">
+                <OptionalUrlField
+                  id="linkedin"
+                  label="LinkedIn URL"
+                  icon={<Link2 className="size-4" />}
+                  value={formData.linkedin_url}
+                  disabled={isBusy}
+                  onChange={(value) => updateField("linkedin_url", value)}
+                />
 
-              <OptionalUrlField
-                id="facebook"
-                label="Facebook URL"
-                value={formData.facebook_url}
-                onChange={(value) => updateField("facebook_url", value)}
-              />
+                <OptionalUrlField
+                  id="facebook"
+                  label="Facebook URL"
+                  icon={<Link2 className="size-4" />}
+                  value={formData.facebook_url}
+                  disabled={isBusy}
+                  onChange={(value) => updateField("facebook_url", value)}
+                />
 
-              <OptionalUrlField
-                id="twitter"
-                label="X / Twitter URL"
-                value={formData.twitter_url}
-                onChange={(value) => updateField("twitter_url", value)}
-              />
+                <OptionalUrlField
+                  id="twitter"
+                  label="X / Twitter URL"
+                  icon={<Link2 className="size-4" />}
+                  value={formData.twitter_url}
+                  disabled={isBusy}
+                  onChange={(value) => updateField("twitter_url", value)}
+                />
 
-              <OptionalUrlField
-                id="youtube"
-                label="YouTube URL"
-                value={formData.youtube_url}
-                onChange={(value) => updateField("youtube_url", value)}
-              />
-            </Panel>
+                <OptionalUrlField
+                  id="youtube"
+                  label="YouTube URL"
+                  icon={<Link2 className="size-4" />}
+                  value={formData.youtube_url}
+                  disabled={isBusy}
+                  onChange={(value) => updateField("youtube_url", value)}
+                />
+              </div>
+            </SectionCard>
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                  <Globe2 className="h-6 w-6" />
-                </div>
+            <section className="sticky top-24 space-y-6">
+              <FormCard
+                title="Save changes"
+                description="Publish the latest branding, contact, footer, and social settings."
+              >
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => {
+                    void handleSubmit()
+                  }}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Save className="mr-2 size-4" />
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </FormCard>
 
-                <div>
-                  <h2 className="font-bold text-slate-900">Public Settings</h2>
-
-                  <p className="text-sm text-slate-500">
-                    Control public visibility.
-                  </p>
-                </div>
-              </div>
-
-              <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
-                <input
-                  type="checkbox"
+              <FormCard
+                title="Public settings"
+                description="Control whether the public header and footer can load these settings."
+              >
+                <ToggleField
+                  title="Site Settings Active"
+                  description="Keep enabled so global branding and footer content remain available publicly."
                   checked={formData.is_active}
-                  onChange={(event) =>
-                    updateField("is_active", event.target.checked)
-                  }
-                  className="mt-1 h-4 w-4"
+                  disabled={isBusy}
+                  onChange={(checked) => updateField("is_active", checked)}
                 />
+              </FormCard>
 
-                <span>
-                  <span className="block font-semibold text-slate-900">
-                    Active
-                  </span>
+              <CompletionCard
+                completedFields={completedFields}
+                totalFields={4}
+                percentage={completionPercentage}
+                socialCount={socialCount}
+                isActive={formData.is_active}
+              />
 
-                  <span className="mt-1 block text-sm leading-6 text-slate-500">
-                    Keep this enabled so the public header and footer can load
-                    these settings.
-                  </span>
-                </span>
-              </label>
-            </div>
+              <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                    <ImageUp className="size-5" />
+                  </div>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <h2 className="font-bold text-slate-900">Upload Guidelines</h2>
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Upload guidelines
+                    </h2>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Upload PNG, JPG, JPEG, WebP, SVG or ICO files. Maximum file size
-                is 5 MB. Use a transparent PNG, WebP or SVG for the company
-                logo.
-              </p>
-            </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Upload PNG, JPG, JPEG, WebP, SVG, or ICO files up to 5 MB.
+                      Transparent PNG, WebP, or SVG files work best for logos.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <BrandPreview formData={formData} />
+            </section>
           </aside>
         </div>
-      </section>
+      </div>
     </>
+  )
+}
+
+function SectionCard({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ReactNode
+  title: string
+  description: string
+  children: ReactNode
+}) {
+  return (
+    <FormCard
+      title={title}
+      description={description}
+      action={
+        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          {icon}
+        </div>
+      }
+    >
+      <div className="space-y-5">{children}</div>
+    </FormCard>
   )
 }
 
@@ -487,7 +659,7 @@ function ImageUploadField({
 }) {
   return (
     <div>
-      <p className="mb-2 block font-medium text-slate-700">{label}</p>
+      <p className="mb-2 block text-sm font-bold text-slate-700">{label}</p>
 
       <input
         ref={inputRef}
@@ -506,12 +678,12 @@ function ImageUploadField({
         }}
       />
 
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
         {value ? (
           <div className="space-y-4">
             <div
-              className={`flex items-center justify-center rounded-lg border border-slate-200 bg-white p-4 ${
-                compactPreview ? "min-h-20" : "min-h-32"
+              className={`flex items-center justify-center rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${
+                compactPreview ? "min-h-24" : "min-h-36"
               }`}
             >
               <img
@@ -520,26 +692,26 @@ function ImageUploadField({
                 className={
                   compactPreview
                     ? "max-h-12 max-w-full object-contain"
-                    : "max-h-24 max-w-full object-contain"
+                    : "max-h-28 max-w-full object-contain"
                 }
               />
             </div>
 
-            <p className="text-xs leading-5 break-all text-slate-500">
+            <p className="line-clamp-2 text-xs leading-5 break-all text-slate-500">
               {value}
             </p>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 disabled={isUploading}
                 onClick={() => inputRef.current?.click()}
-                className="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:opacity-50"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
               >
                 {isUploading ? (
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
                 ) : (
-                  <ImageUp className="mr-2 h-4 w-4" />
+                  <ImageUp className="mr-2 size-4" />
                 )}
                 Replace
               </button>
@@ -548,9 +720,9 @@ function ImageUploadField({
                 type="button"
                 disabled={isUploading}
                 onClick={onRemove}
-                className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 size-4" />
                 Remove
               </button>
             </div>
@@ -560,15 +732,15 @@ function ImageUploadField({
             type="button"
             disabled={isUploading}
             onClick={() => inputRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center rounded-lg px-4 py-8 text-center transition hover:bg-white disabled:opacity-50"
+            className="flex w-full flex-col items-center justify-center rounded-xl px-4 py-10 text-center transition hover:bg-white disabled:opacity-50"
           >
             {isUploading ? (
-              <LoaderCircle className="h-8 w-8 animate-spin text-blue-600" />
+              <LoaderCircle className="size-8 animate-spin text-blue-600" />
             ) : (
-              <ImageUp className="h-8 w-8 text-blue-600" />
+              <ImageUp className="size-8 text-blue-600" />
             )}
 
-            <span className="mt-3 font-semibold text-slate-900">
+            <span className="mt-3 font-extrabold text-slate-950">
               {isUploading ? "Uploading..." : `Upload ${label}`}
             </span>
 
@@ -582,70 +754,250 @@ function ImageUploadField({
   )
 }
 
-function Panel({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description: string
-  children: ReactNode
-}) {
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-      <p className="mt-1 text-sm text-slate-500">{description}</p>
-      <div className="mt-6 space-y-5">{children}</div>
-    </div>
-  )
-}
-
-function FormField({
-  id,
-  label,
-  required = false,
-  children,
-}: {
-  id: string
-  label: string
-  required?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </label>
-
-      {children}
-    </div>
-  )
-}
-
 function OptionalUrlField({
   id,
   label,
+  icon,
   value,
+  disabled,
   onChange,
 }: {
   id: string
   label: string
+  icon: ReactNode
   value: string | null
+  disabled: boolean
   onChange: (value: string | null) => void
 }) {
   return (
     <FormField id={id} label={label}>
-      <input
-        id={id}
-        type="url"
-        value={value ?? ""}
-        onChange={(event) => onChange(event.target.value || null)}
-        className={inputClassName}
-      />
+      <div className="relative">
+        <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-slate-400">
+          {icon}
+        </span>
+
+        <input
+          id={id}
+          type="url"
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value || null)}
+          className={`${inputClassName} pl-11`}
+          disabled={disabled}
+          placeholder="https://"
+        />
+      </div>
     </FormField>
   )
 }
 
+function ToggleField({
+  title,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  title: string
+  description: string
+  checked: boolean
+  disabled: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+        checked
+          ? "border-blue-200 bg-blue-50/70"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="sr-only"
+      />
+
+      <span
+        aria-hidden="true"
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-blue-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
+
+      <span>
+        <span className="block text-sm font-extrabold text-slate-950">
+          {title}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          {description}
+        </span>
+      </span>
+    </label>
+  )
+}
+
+function CompletionCard({
+  completedFields,
+  totalFields,
+  percentage,
+  socialCount,
+  isActive,
+}: {
+  completedFields: number
+  totalFields: number
+  percentage: number
+  socialCount: number
+  isActive: boolean
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-extrabold text-slate-950">
+            Configuration readiness
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {completedFields} of {totalFields} required fields completed
+          </p>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="size-5" />
+        </div>
+      </div>
+
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <StatusMetric label="Completion" value={`${percentage}%`} />
+        <StatusMetric label="Social links" value={`${socialCount}/4`} />
+      </div>
+
+      <div
+        className={`mt-3 rounded-xl border px-4 py-3 text-sm font-bold ${
+          isActive
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            : "border-amber-200 bg-amber-50 text-amber-700"
+        }`}
+      >
+        {isActive ? "Site settings are active" : "Site settings are inactive"}
+      </div>
+    </section>
+  )
+}
+
+function StatusMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-500 uppercase">
+        {label}
+      </p>
+
+      <p className="mt-2 text-sm font-black text-slate-950">{value}</p>
+    </div>
+  )
+}
+
+function BrandPreview({ formData }: { formData: SiteSettingsRequest }) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-slate-500 uppercase">
+        <Sparkles className="size-3.5" />
+        Brand preview
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white">
+        <div className="flex items-center gap-3">
+          {formData.logo_url ? (
+            <div className="flex size-11 items-center justify-center overflow-hidden rounded-xl bg-white p-2">
+              <img
+                src={formData.logo_url}
+                alt="Logo preview"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex size-11 items-center justify-center rounded-xl bg-white/10">
+              <Building2 className="size-5" />
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <p className="truncate font-extrabold">
+              {formData.company_name || "Company Name"}
+            </p>
+
+            <p className="mt-1 truncate text-xs text-slate-400">
+              {formData.contact_email || "contact@example.com"}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-300">
+          {formData.footer_description ||
+            "Your footer description will appear here."}
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function SummaryCard({
+  label,
+  value,
+  suffix = "",
+  description,
+  icon,
+  tone = "default",
+}: {
+  label: string
+  value: number
+  suffix?: string
+  description: string
+  icon: ReactNode
+  tone?: "default" | "success" | "featured" | "neutral"
+}) {
+  const toneClasses = {
+    default: "bg-blue-50 text-blue-700",
+    success: "bg-emerald-50 text-emerald-700",
+    featured: "bg-violet-50 text-violet-700",
+    neutral: "bg-slate-100 text-slate-700",
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+
+          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            {value}
+            {suffix}
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+        </div>
+
+        <div className={`rounded-xl p-3 ${toneClasses[tone]}`}>{icon}</div>
+      </div>
+    </div>
+  )
+}
+
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

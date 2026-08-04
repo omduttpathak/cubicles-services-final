@@ -1,12 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import axios from "axios"
 import {
   BriefcaseBusiness,
+  CheckCircle2,
   Eye,
   FileText,
   FormInput,
   Save,
   Search,
+  Settings2,
+  Sparkles,
   Upload,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -16,6 +19,10 @@ import {
   updateAdminCareerPage,
   type UpdateAdminCareerPageRequest,
 } from "@/api/adminCareerPageApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
@@ -71,6 +78,40 @@ const initialFormData: UpdateAdminCareerPageRequest = {
   is_active: true,
 }
 
+const requiredFields: Array<keyof UpdateAdminCareerPageRequest> = [
+  "hero_eyebrow",
+  "hero_title",
+  "hero_description",
+  "openings_eyebrow",
+  "openings_title",
+  "openings_description",
+  "empty_title",
+  "empty_description",
+  "apply_button_text",
+  "application_eyebrow",
+  "application_title_prefix",
+  "application_description",
+  "full_name_label",
+  "email_label",
+  "phone_label",
+  "position_label",
+  "experience_label",
+  "company_label",
+  "location_label",
+  "linkedin_label",
+  "resume_label",
+  "cover_letter_label",
+  "resume_upload_title",
+  "resume_upload_description",
+  "cancel_button_text",
+  "submit_button_text",
+  "submitting_button_text",
+  "success_message",
+  "error_message",
+  "seo_title",
+  "seo_description",
+]
+
 export default function AdminCareerPage() {
   const [formData, setFormData] =
     useState<UpdateAdminCareerPageRequest>(initialFormData)
@@ -107,40 +148,6 @@ export default function AdminCareerPage() {
   }
 
   async function handleSubmit() {
-    const requiredFields: Array<keyof UpdateAdminCareerPageRequest> = [
-      "hero_eyebrow",
-      "hero_title",
-      "hero_description",
-      "openings_eyebrow",
-      "openings_title",
-      "openings_description",
-      "empty_title",
-      "empty_description",
-      "apply_button_text",
-      "application_eyebrow",
-      "application_title_prefix",
-      "application_description",
-      "full_name_label",
-      "email_label",
-      "phone_label",
-      "position_label",
-      "experience_label",
-      "company_label",
-      "location_label",
-      "linkedin_label",
-      "resume_label",
-      "cover_letter_label",
-      "resume_upload_title",
-      "resume_upload_description",
-      "cancel_button_text",
-      "submit_button_text",
-      "submitting_button_text",
-      "success_message",
-      "error_message",
-      "seo_title",
-      "seo_description",
-    ]
-
     const hasMissingField = requiredFields.some((field) => {
       const value = formData[field]
 
@@ -241,6 +248,24 @@ export default function AdminCareerPage() {
     void loadCareerPage()
   }, [])
 
+  const completedFields = useMemo(
+    () =>
+      requiredFields.filter((field) => {
+        const value = formData[field]
+
+        return typeof value === "string" && Boolean(value.trim())
+      }).length,
+    [formData]
+  )
+
+  const completionPercentage = Math.round(
+    (completedFields / requiredFields.length) * 100
+  )
+
+  const visibleSections = [formData.show_hero, formData.show_openings].filter(
+    Boolean
+  ).length
+
   if (isLoading) {
     return <PageLoader message="Loading Careers page settings..." />
   }
@@ -264,42 +289,26 @@ export default function AdminCareerPage() {
         description="Manage the public Careers page content and application form."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold tracking-wider text-blue-600 uppercase">
-              Content Management
-            </p>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Content management"
+          title="Careers Page"
+          description="Manage Careers page headings, application labels, notifications, visibility, and SEO."
+          backLabel="Back to Job Openings"
+          onBack={() => window.history.back()}
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={isSubmitting}
+          onSubmit={() => {
+            void handleSubmit()
+          }}
+        />
 
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Careers Page
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Manage Careers page headings, application labels, notifications,
-              visibility and SEO.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Save className="mr-2 h-4 w-4" />
-
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <Panel
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Hero Section"
+            <SectionCard
+              icon={<BriefcaseBusiness className="size-5" />}
+              title="Hero section"
               description="The introduction displayed at the top of the Careers page."
             >
               <TextField
@@ -307,6 +316,7 @@ export default function AdminCareerPage() {
                 label="Hero Eyebrow"
                 value={formData.hero_eyebrow}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("hero_eyebrow", value)}
               />
 
@@ -316,6 +326,7 @@ export default function AdminCareerPage() {
                 value={formData.hero_title}
                 rows={3}
                 maxLength={500}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("hero_title", value)}
               />
 
@@ -325,18 +336,14 @@ export default function AdminCareerPage() {
                 value={formData.hero_description}
                 rows={5}
                 maxLength={1000}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("hero_description", value)}
               />
+            </SectionCard>
 
-              <CharacterCount
-                current={formData.hero_description.length}
-                maximum={1000}
-              />
-            </Panel>
-
-            <Panel
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Job Openings Section"
+            <SectionCard
+              icon={<BriefcaseBusiness className="size-5" />}
+              title="Job openings section"
               description="The heading shown above available positions."
             >
               <TextField
@@ -344,6 +351,7 @@ export default function AdminCareerPage() {
                 label="Section Eyebrow"
                 value={formData.openings_eyebrow}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("openings_eyebrow", value)}
               />
 
@@ -353,6 +361,7 @@ export default function AdminCareerPage() {
                 value={formData.openings_title}
                 rows={3}
                 maxLength={500}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("openings_title", value)}
               />
 
@@ -362,12 +371,8 @@ export default function AdminCareerPage() {
                 value={formData.openings_description}
                 rows={5}
                 maxLength={1000}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("openings_description", value)}
-              />
-
-              <CharacterCount
-                current={formData.openings_description.length}
-                maximum={1000}
               />
 
               <TextField
@@ -375,13 +380,14 @@ export default function AdminCareerPage() {
                 label="Apply Button Text"
                 value={formData.apply_button_text}
                 maxLength={100}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("apply_button_text", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<FileText className="h-5 w-5" />}
-              title="Empty Openings State"
+            <SectionCard
+              icon={<FileText className="size-5" />}
+              title="Empty openings state"
               description="Content displayed when no job positions are available."
             >
               <TextField
@@ -389,6 +395,7 @@ export default function AdminCareerPage() {
                 label="Empty State Title"
                 value={formData.empty_title}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("empty_title", value)}
               />
 
@@ -398,13 +405,14 @@ export default function AdminCareerPage() {
                 value={formData.empty_description}
                 rows={4}
                 maxLength={500}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("empty_description", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<FormInput className="h-5 w-5" />}
-              title="Application Introduction"
+            <SectionCard
+              icon={<FormInput className="size-5" />}
+              title="Application introduction"
               description="The heading displayed at the top of the application modal."
             >
               <TextField
@@ -412,6 +420,7 @@ export default function AdminCareerPage() {
                 label="Application Eyebrow"
                 value={formData.application_eyebrow}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("application_eyebrow", value)}
               />
 
@@ -420,6 +429,7 @@ export default function AdminCareerPage() {
                 label="Application Title Prefix"
                 value={formData.application_title_prefix}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) =>
                   updateField("application_title_prefix", value)
                 }
@@ -431,15 +441,16 @@ export default function AdminCareerPage() {
                 value={formData.application_description}
                 rows={4}
                 maxLength={500}
+                disabled={isSubmitting}
                 onChange={(value) =>
                   updateField("application_description", value)
                 }
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<FormInput className="h-5 w-5" />}
-              title="Application Form Labels"
+            <SectionCard
+              icon={<FormInput className="size-5" />}
+              title="Application form labels"
               description="Customize the labels used by the application form."
             >
               <div className="grid gap-5 md:grid-cols-2">
@@ -448,6 +459,7 @@ export default function AdminCareerPage() {
                   label="Full Name Label"
                   value={formData.full_name_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("full_name_label", value)}
                 />
 
@@ -456,6 +468,7 @@ export default function AdminCareerPage() {
                   label="Email Label"
                   value={formData.email_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("email_label", value)}
                 />
 
@@ -464,6 +477,7 @@ export default function AdminCareerPage() {
                   label="Phone Label"
                   value={formData.phone_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("phone_label", value)}
                 />
 
@@ -472,6 +486,7 @@ export default function AdminCareerPage() {
                   label="Position Label"
                   value={formData.position_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("position_label", value)}
                 />
 
@@ -480,6 +495,7 @@ export default function AdminCareerPage() {
                   label="Experience Label"
                   value={formData.experience_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("experience_label", value)}
                 />
 
@@ -488,6 +504,7 @@ export default function AdminCareerPage() {
                   label="Company Label"
                   value={formData.company_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("company_label", value)}
                 />
 
@@ -496,6 +513,7 @@ export default function AdminCareerPage() {
                   label="Location Label"
                   value={formData.location_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("location_label", value)}
                 />
 
@@ -504,6 +522,7 @@ export default function AdminCareerPage() {
                   label="LinkedIn Label"
                   value={formData.linkedin_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("linkedin_label", value)}
                 />
 
@@ -512,6 +531,7 @@ export default function AdminCareerPage() {
                   label="Resume Label"
                   value={formData.resume_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("resume_label", value)}
                 />
 
@@ -520,14 +540,15 @@ export default function AdminCareerPage() {
                   label="Cover Letter Label"
                   value={formData.cover_letter_label}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("cover_letter_label", value)}
                 />
               </div>
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Upload className="h-5 w-5" />}
-              title="Resume Upload"
+            <SectionCard
+              icon={<Upload className="size-5" />}
+              title="Resume upload"
               description="Customize the resume upload-area instructions."
             >
               <TextField
@@ -535,6 +556,7 @@ export default function AdminCareerPage() {
                 label="Upload Title"
                 value={formData.resume_upload_title}
                 maxLength={150}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("resume_upload_title", value)}
               />
 
@@ -543,15 +565,16 @@ export default function AdminCareerPage() {
                 label="Upload Description"
                 value={formData.resume_upload_description}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) =>
                   updateField("resume_upload_description", value)
                 }
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<FileText className="h-5 w-5" />}
-              title="Buttons and Notifications"
+            <SectionCard
+              icon={<FileText className="size-5" />}
+              title="Buttons and notifications"
               description="Manage application buttons and feedback messages."
             >
               <div className="grid gap-5 md:grid-cols-2">
@@ -560,6 +583,7 @@ export default function AdminCareerPage() {
                   label="Cancel Button Text"
                   value={formData.cancel_button_text}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("cancel_button_text", value)}
                 />
 
@@ -568,6 +592,7 @@ export default function AdminCareerPage() {
                   label="Submit Button Text"
                   value={formData.submit_button_text}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) => updateField("submit_button_text", value)}
                 />
 
@@ -576,6 +601,7 @@ export default function AdminCareerPage() {
                   label="Submitting Button Text"
                   value={formData.submitting_button_text}
                   maxLength={100}
+                  disabled={isSubmitting}
                   onChange={(value) =>
                     updateField("submitting_button_text", value)
                   }
@@ -587,6 +613,7 @@ export default function AdminCareerPage() {
                 label="Success Message"
                 value={formData.success_message}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("success_message", value)}
               />
 
@@ -595,13 +622,14 @@ export default function AdminCareerPage() {
                 label="Error Message"
                 value={formData.error_message}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("error_message", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<Search className="h-5 w-5" />}
-              title="Search Engine Optimization"
+            <SectionCard
+              icon={<Search className="size-5" />}
+              title="Search engine optimization"
               description="Metadata used by search engines and social previews."
             >
               <TextField
@@ -609,12 +637,8 @@ export default function AdminCareerPage() {
                 label="SEO Title"
                 value={formData.seo_title}
                 maxLength={255}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("seo_title", value)}
-              />
-
-              <CharacterCount
-                current={formData.seo_title.length}
-                maximum={255}
               />
 
               <TextAreaField
@@ -623,103 +647,142 @@ export default function AdminCareerPage() {
                 value={formData.seo_description}
                 rows={5}
                 maxLength={500}
+                disabled={isSubmitting}
                 onChange={(value) => updateField("seo_description", value)}
               />
 
-              <CharacterCount
-                current={formData.seo_description.length}
-                maximum={500}
+              <SearchPreview
+                title={formData.seo_title}
+                description={formData.seo_description}
               />
-            </Panel>
+            </SectionCard>
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                  <Eye className="h-6 w-6" />
+            <section className="sticky top-24 space-y-6">
+              <FormCard
+                title="Save changes"
+                description="Apply the current Careers page content, labels, and visibility settings."
+              >
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    void handleSubmit()
+                  }}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Save className="mr-2 size-4" />
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </FormCard>
+
+              <FormCard
+                title="Page visibility"
+                description="Control the public Careers page and its main sections."
+              >
+                <div className="space-y-3">
+                  <ToggleField
+                    title="Careers Page Active"
+                    description="Keep enabled so the public Careers page can load these settings."
+                    checked={formData.is_active}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("is_active", checked)}
+                  />
+
+                  <ToggleField
+                    title="Show Hero Section"
+                    description="Display the Careers page introduction."
+                    checked={formData.show_hero}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("show_hero", checked)}
+                  />
+
+                  <ToggleField
+                    title="Show Job Openings"
+                    description="Display job listings and application controls."
+                    checked={formData.show_openings}
+                    disabled={isSubmitting}
+                    onChange={(checked) =>
+                      updateField("show_openings", checked)
+                    }
+                  />
                 </div>
+              </FormCard>
 
-                <div>
-                  <h2 className="font-bold text-slate-900">Page Visibility</h2>
+              <CompletionCard
+                completedFields={completedFields}
+                totalFields={requiredFields.length}
+                percentage={completionPercentage}
+                visibleSections={visibleSections}
+                isActive={formData.is_active}
+              />
 
-                  <p className="text-sm text-slate-500">
-                    Control the public Careers page.
-                  </p>
+              <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                    <Settings2 className="size-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Job listings
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Current job openings are managed from Job Openings in the
+                      admin sidebar.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="mt-6 space-y-4">
-                <ToggleField
-                  title="Careers Page Active"
-                  description="Keep enabled so the public Careers page can load these settings."
-                  checked={formData.is_active}
-                  onChange={(checked) => updateField("is_active", checked)}
-                />
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-amber-600 shadow-sm ring-1 ring-amber-100">
+                    <Eye className="size-5" />
+                  </div>
 
-                <ToggleField
-                  title="Show Hero Section"
-                  description="Display the Careers page introduction."
-                  checked={formData.show_hero}
-                  onChange={(checked) => updateField("show_hero", checked)}
-                />
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Career applications
+                    </h2>
 
-                <ToggleField
-                  title="Show Job Openings"
-                  description="Display job listings and application controls."
-                  checked={formData.show_openings}
-                  onChange={(checked) => updateField("show_openings", checked)}
-                />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <h2 className="font-bold text-slate-900">Job Listings</h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                The current job listings are still loaded from the frontend jobs
-                data. A dedicated Job Openings manager can replace them in the
-                next stage.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-              <h2 className="font-bold text-slate-900">Career Applications</h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Submitted applications are managed from Career Applications in
-                the admin sidebar.
-              </p>
-            </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Submitted applications are managed from Career
+                      Applications in the admin sidebar.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </section>
           </aside>
         </div>
-      </section>
+      </div>
     </>
   )
 }
 
-type PanelProps = {
+type SectionCardProps = {
   icon: ReactNode
   title: string
   description: string
   children: ReactNode
 }
 
-function Panel({ icon, title, description, children }: PanelProps) {
+function SectionCard({ icon, title, description, children }: SectionCardProps) {
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-blue-50 p-2.5 text-blue-600">{icon}</div>
-
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
+    <FormCard
+      title={title}
+      description={description}
+      action={
+        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          {icon}
         </div>
-      </div>
-
-      <div className="mt-6 space-y-5">{children}</div>
-    </div>
+      }
+    >
+      <div className="space-y-5">{children}</div>
+    </FormCard>
   )
 }
 
@@ -728,21 +791,36 @@ type TextFieldProps = {
   label: string
   value: string
   maxLength?: number
+  disabled?: boolean
   onChange: (value: string) => void
 }
 
-function TextField({ id, label, value, maxLength, onChange }: TextFieldProps) {
+function TextField({
+  id,
+  label,
+  value,
+  maxLength,
+  disabled = false,
+  onChange,
+}: TextFieldProps) {
   return (
-    <FormField id={id} label={label} required>
-      <input
-        id={id}
-        type="text"
-        value={value}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        className={inputClassName}
-      />
-    </FormField>
+    <div className="space-y-2">
+      <FormField id={id} label={label} required>
+        <input
+          id={id}
+          type="text"
+          value={value}
+          maxLength={maxLength}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className={inputClassName}
+        />
+      </FormField>
+
+      {typeof maxLength === "number" && (
+        <CharacterCount current={value.length} maximum={maxLength} />
+      )}
+    </div>
   )
 }
 
@@ -752,6 +830,7 @@ type TextAreaFieldProps = {
   value: string
   rows: number
   maxLength?: number
+  disabled?: boolean
   onChange: (value: string) => void
 }
 
@@ -761,39 +840,26 @@ function TextAreaField({
   value,
   rows,
   maxLength,
+  disabled = false,
   onChange,
 }: TextAreaFieldProps) {
   return (
-    <FormField id={id} label={label} required>
-      <textarea
-        id={id}
-        rows={rows}
-        value={value}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${inputClassName} leading-7`}
-      />
-    </FormField>
-  )
-}
+    <div className="space-y-2">
+      <FormField id={id} label={label} required>
+        <textarea
+          id={id}
+          rows={rows}
+          value={value}
+          maxLength={maxLength}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${inputClassName} leading-7`}
+        />
+      </FormField>
 
-type FormFieldProps = {
-  id: string
-  label: string
-  required?: boolean
-  children: ReactNode
-}
-
-function FormField({ id, label, required = false, children }: FormFieldProps) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-
-        {required && <span className="text-red-600"> *</span>}
-      </label>
-
-      {children}
+      {typeof maxLength === "number" && (
+        <CharacterCount current={value.length} maximum={maxLength} />
+      )}
     </div>
   )
 }
@@ -802,6 +868,7 @@ type ToggleFieldProps = {
   title: string
   description: string
   checked: boolean
+  disabled?: boolean
   onChange: (checked: boolean) => void
 }
 
@@ -809,21 +876,44 @@ function ToggleField({
   title,
   description,
   checked,
+  disabled = false,
   onChange,
 }: ToggleFieldProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:bg-slate-50">
+    <label
+      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+        checked
+          ? "border-blue-200 bg-blue-50/70"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4"
+        className="sr-only"
       />
 
-      <span>
-        <span className="block font-semibold text-slate-900">{title}</span>
+      <span
+        aria-hidden="true"
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-blue-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
 
-        <span className="mt-1 block text-sm leading-6 text-slate-500">
+      <span>
+        <span className="block text-sm font-extrabold text-slate-950">
+          {title}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
           {description}
         </span>
       </span>
@@ -831,19 +921,126 @@ function ToggleField({
   )
 }
 
-function CharacterCount({
-  current,
-  maximum,
+function CompletionCard({
+  completedFields,
+  totalFields,
+  percentage,
+  visibleSections,
+  isActive,
 }: {
-  current: number
-  maximum: number
+  completedFields: number
+  totalFields: number
+  percentage: number
+  visibleSections: number
+  isActive: boolean
 }) {
   return (
-    <p className="-mt-3 text-right text-xs text-slate-500">
-      {current}/{maximum}
-    </p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-extrabold text-slate-950">
+            Page readiness
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {completedFields} of {totalFields} required fields completed
+          </p>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="size-5" />
+        </div>
+      </div>
+
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <StatusMetric
+          label="Completion"
+          value={`${percentage}%`}
+          icon={<FileText className="size-4" />}
+        />
+
+        <StatusMetric
+          label="Visible sections"
+          value={`${visibleSections}/2`}
+          icon={<Eye className="size-4" />}
+        />
+      </div>
+
+      <div
+        className={`mt-3 rounded-xl border px-4 py-3 text-sm font-bold ${
+          isActive
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            : "border-amber-200 bg-amber-50 text-amber-700"
+        }`}
+      >
+        {isActive ? "Careers page is active" : "Careers page is inactive"}
+      </div>
+    </section>
+  )
+}
+
+function StatusMetric({
+  label,
+  value,
+  icon,
+}: {
+  label: string
+  value: string
+  icon: ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center gap-2 text-slate-500">
+        {icon}
+
+        <span className="text-[11px] font-bold tracking-[0.12em] uppercase">
+          {label}
+        </span>
+      </div>
+
+      <p className="mt-2 text-sm font-black text-slate-950">{value}</p>
+    </div>
+  )
+}
+
+function SearchPreview({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-slate-500 uppercase">
+        <Sparkles className="size-3.5" />
+        Search preview
+      </div>
+
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <p className="truncate text-xs text-emerald-700">
+          cubiclesservices.com › careers
+        </p>
+
+        <p className="mt-1 line-clamp-2 text-lg font-medium text-blue-700">
+          {title || "Careers | Cubicles Services"}
+        </p>
+
+        <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">
+          {description ||
+            "Add an SEO description to preview how the Careers page may appear in search results."}
+        </p>
+      </div>
+    </section>
   )
 }
 
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

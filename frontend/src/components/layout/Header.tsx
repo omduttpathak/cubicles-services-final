@@ -66,6 +66,15 @@ const fallbackNavigation: NavigationItem[] = [
   },
 ]
 
+function isValidNavigationItem(item: NavigationItem): boolean {
+  return (
+    typeof item.title === "string" &&
+    item.title.trim().length > 0 &&
+    typeof item.url === "string" &&
+    item.url.trim().length > 0
+  )
+}
+
 export default function Header() {
   const { settings } = useSiteSettings()
 
@@ -77,15 +86,22 @@ export default function Header() {
       try {
         const response = await getNavigation()
 
-        if (response.length > 0) {
-          setNavigationItems(
-            [...response].sort(
-              (first, second) => first.display_order - second.display_order
-            )
-          )
+        const validNavigationItems = response.filter(isValidNavigationItem)
+
+        if (validNavigationItems.length === 0) {
+          setNavigationItems(fallbackNavigation)
+          return
         }
+
+        const sortedNavigationItems = [...validNavigationItems].sort(
+          (first, second) =>
+            (first.display_order ?? 0) - (second.display_order ?? 0)
+        )
+
+        setNavigationItems(sortedNavigationItems)
       } catch (error) {
         console.error("Unable to load website navigation:", error)
+        setNavigationItems(fallbackNavigation)
       }
     }
 
@@ -137,8 +153,13 @@ export default function Header() {
               className="relative z-10 hidden items-center gap-1 md:flex"
               aria-label="Primary navigation"
             >
-              {navigationItems.map((item) => (
-                <DesktopNavigationItem key={item.id} item={item} />
+              {navigationItems.map((item, index) => (
+                <DesktopNavigationItem
+                  key={`${item.id ?? "navigation"}-${
+                    item.url ?? "missing-url"
+                  }-${index}`}
+                  item={item}
+                />
               ))}
             </nav>
 
@@ -153,18 +174,29 @@ export default function Header() {
 }
 
 function DesktopNavigationItem({ item }: { item: NavigationItem }) {
-  const isContact = item.url === "/contact"
-  const isInternal = item.url.startsWith("/")
+  const url = typeof item.url === "string" ? item.url.trim() : ""
+
+  const title =
+    typeof item.title === "string" && item.title.trim().length > 0
+      ? item.title.trim()
+      : "Navigation"
+
+  if (!url) {
+    return null
+  }
+
+  const isContact = url === "/contact"
+  const isInternal = url.startsWith("/")
 
   if (!isInternal) {
     return (
       <a
-        href={item.url}
+        href={url}
         target={item.open_in_new_tab ? "_blank" : undefined}
         rel={item.open_in_new_tab ? "noreferrer noopener" : undefined}
-        className={isContact ? contactClassName : navigationClassName}
+        className={navigationClassName}
       >
-        <span>{item.title}</span>
+        <span>{title}</span>
 
         {item.open_in_new_tab && <ArrowUpRight className="size-3.5" />}
       </a>
@@ -174,12 +206,12 @@ function DesktopNavigationItem({ item }: { item: NavigationItem }) {
   if (isContact) {
     return (
       <Link
-        to={item.url}
+        to={url}
         target={item.open_in_new_tab ? "_blank" : undefined}
         rel={item.open_in_new_tab ? "noreferrer noopener" : undefined}
         className={contactClassName}
       >
-        <span>{item.title}</span>
+        <span>{title}</span>
 
         <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
       </Link>
@@ -188,8 +220,8 @@ function DesktopNavigationItem({ item }: { item: NavigationItem }) {
 
   return (
     <NavLink
-      to={item.url}
-      end={item.url === "/"}
+      to={url}
+      end={url === "/"}
       target={item.open_in_new_tab ? "_blank" : undefined}
       rel={item.open_in_new_tab ? "noreferrer noopener" : undefined}
       className={({ isActive }) =>
@@ -198,7 +230,7 @@ function DesktopNavigationItem({ item }: { item: NavigationItem }) {
     >
       {({ isActive }) => (
         <>
-          <span>{item.title}</span>
+          <span>{title}</span>
 
           <span
             aria-hidden="true"

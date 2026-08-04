@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   closestCenter,
   DndContext,
@@ -18,15 +18,18 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import axios from "axios"
 import {
+  CheckCircle2,
   ExternalLink,
   Eye,
   EyeOff,
+  FolderKanban,
   GripVertical,
   Link2,
   LoaderCircle,
   Pencil,
   Plus,
   Save,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react"
@@ -41,6 +44,9 @@ import {
   type AdminFooterLink,
   type FooterLinkRequest,
 } from "@/api/adminFooterLinksApi"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
@@ -59,6 +65,7 @@ export default function AdminFooterLinks() {
   const [formData, setFormData] = useState<FooterLinkRequest>(initialFormData)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -87,16 +94,20 @@ export default function AdminFooterLinks() {
       groups.set(item.group_name, group)
     })
 
-    return Array.from(groups.entries()).map(([groupName, links]) => ({
-      groupName,
-      links: sortGroup(links),
-    }))
+    return Array.from(groups.entries())
+      .map(([groupName, links]) => ({
+        groupName,
+        links: sortGroup(links),
+      }))
+      .sort((first, second) => first.groupName.localeCompare(second.groupName))
   }, [items])
 
   const visibleCount = useMemo(
     () => items.filter((item) => item.is_visible).length,
     [items]
   )
+
+  const hiddenCount = items.length - visibleCount
 
   async function loadFooterLinks() {
     try {
@@ -153,6 +164,11 @@ export default function AdminFooterLinks() {
       is_visible: item.is_visible,
     })
     setIsFormOpen(true)
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
   }
 
   function closeForm() {
@@ -206,6 +222,7 @@ export default function AdminFooterLinks() {
         setItems((current) =>
           current.map((item) => (item.id === updated.id ? updated : item))
         )
+
         toast.success("Footer link updated successfully.")
       }
 
@@ -362,84 +379,141 @@ export default function AdminFooterLinks() {
         description="Manage grouped links displayed in the website footer."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold tracking-wider text-blue-600 uppercase">
-              Site Management
-            </p>
+      <section className="space-y-6">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.25),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.18),transparent_40%)]" />
 
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Footer Links
-            </h1>
+          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-[0.16em] text-blue-200 uppercase backdrop-blur">
+                <Sparkles className="size-3.5" />
+                Site Management
+              </div>
 
-            <p className="mt-1 text-sm text-slate-600">
-              Manage footer columns, links, visibility and display order.
-            </p>
+              <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
+                Footer Links
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                Manage footer columns, links, visibility, external targets, and
+                display order.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                disabled={!orderChanged || isSavingOrder}
+                onClick={() => {
+                  void saveOrder()
+                }}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isSavingOrder ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
+
+                {isSavingOrder ? "Saving Order..." : "Save Order"}
+              </button>
+
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-100"
+              >
+                <Plus className="size-4" />
+                Add Footer Link
+              </button>
+            </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Total Links"
+            value={items.length}
+            description="All footer links"
+            icon={<Link2 className="size-5" />}
+          />
+
+          <SummaryCard
+            label="Visible"
+            value={visibleCount}
+            description="Displayed publicly"
+            icon={<Eye className="size-5" />}
+            tone="success"
+          />
+
+          <SummaryCard
+            label="Hidden"
+            value={hiddenCount}
+            description="Excluded from footer"
+            icon={<EyeOff className="size-5" />}
+            tone="neutral"
+          />
+
+          <SummaryCard
+            label="Groups"
+            value={groupedItems.length}
+            description="Footer columns"
+            icon={<FolderKanban className="size-5" />}
+            tone="featured"
+          />
+        </div>
+
+        {orderChanged && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-extrabold text-amber-900">
+                Footer order has changed
+              </p>
+
+              <p className="mt-1 text-sm text-amber-700">
+                Save the new order before leaving this page.
+              </p>
+            </div>
+
             <button
               type="button"
-              disabled={!orderChanged || isSavingOrder}
+              disabled={isSavingOrder}
               onClick={() => {
                 void saveOrder()
               }}
-              className="inline-flex items-center rounded-lg border border-blue-200 bg-white px-5 py-3 font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSavingOrder ? (
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                <LoaderCircle className="size-4 animate-spin" />
               ) : (
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="size-4" />
               )}
 
-              {isSavingOrder ? "Saving Order..." : "Save Order"}
-            </button>
-
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="inline-flex items-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Footer Link
+              {isSavingOrder ? "Saving..." : "Save Order"}
             </button>
           </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          <SummaryCard label="Total Links" value={items.length} />
-          <SummaryCard label="Visible" value={visibleCount} />
-          <SummaryCard label="Groups" value={groupedItems.length} />
-        </div>
+        )}
 
         {isFormOpen && (
-          <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  {editingId === null ? "Add Footer Link" : "Edit Footer Link"}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Links using the same group name appear in one footer column.
-                </p>
-              </div>
-
+          <FormCard
+            title={editingId === null ? "Add Footer Link" : "Edit Footer Link"}
+            description="Links using the same group name appear together in one footer column."
+            action={
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={closeForm}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
                 aria-label="Close footer-link form"
+                className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                <X className="h-5 w-5" />
+                <X className="size-4" />
               </button>
-            </div>
-
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
-              <FormField label="Group Name" required>
+            }
+          >
+            <div className="grid gap-5 md:grid-cols-2">
+              <FormField id="footer-group-name" label="Group Name" required>
                 <input
+                  id="footer-group-name"
                   type="text"
                   maxLength={100}
                   value={formData.group_name}
@@ -448,56 +522,77 @@ export default function AdminFooterLinks() {
                     updateField("group_name", event.target.value)
                   }
                   className={inputClassName}
+                  disabled={isSubmitting}
+                />
+
+                <CharacterCount
+                  current={formData.group_name.length}
+                  maximum={100}
                 />
               </FormField>
 
-              <FormField label="Link Title" required>
+              <FormField id="footer-link-title" label="Link Title" required>
                 <input
+                  id="footer-link-title"
                   type="text"
                   maxLength={100}
                   value={formData.title}
                   placeholder="Cloud Migration"
                   onChange={(event) => updateField("title", event.target.value)}
                   className={inputClassName}
+                  disabled={isSubmitting}
                 />
+
+                <CharacterCount current={formData.title.length} maximum={100} />
               </FormField>
 
               <div className="md:col-span-2">
-                <FormField label="URL" required>
+                <FormField
+                  id="footer-link-url"
+                  label="URL"
+                  required
+                  description="Examples: /services/cloud-migration, https://example.com, mailto:hello@example.com"
+                >
                   <input
+                    id="footer-link-url"
                     type="text"
                     maxLength={500}
                     value={formData.url}
                     placeholder="/services/cloud-migration"
                     onChange={(event) => updateField("url", event.target.value)}
                     className={`${inputClassName} font-mono text-sm`}
+                    disabled={isSubmitting}
                   />
+
+                  <CharacterCount current={formData.url.length} maximum={500} />
                 </FormField>
               </div>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <CheckboxCard
+              <ToggleCard
                 title="Visible"
                 description="Show this link in the public footer."
                 checked={formData.is_visible}
+                disabled={isSubmitting}
                 onChange={(checked) => updateField("is_visible", checked)}
               />
 
-              <CheckboxCard
+              <ToggleCard
                 title="Open in New Tab"
                 description="Recommended for external websites and documents."
                 checked={formData.open_in_new_tab}
+                disabled={isSubmitting}
                 onChange={(checked) => updateField("open_in_new_tab", checked)}
               />
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={closeForm}
-                className="rounded-lg border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -508,50 +603,58 @@ export default function AdminFooterLinks() {
                 onClick={() => {
                   void handleSubmit()
                 }}
-                className="inline-flex items-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
                 ) : (
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="mr-2 size-4" />
                 )}
 
                 {isSubmitting ? "Saving..." : "Save Footer Link"}
               </button>
             </div>
-          </div>
+          </FormCard>
         )}
 
-        <div className="mt-6 space-y-6">
-          {groupedItems.length === 0 ? (
-            <div className="rounded-xl bg-white px-6 py-16 text-center shadow-sm">
-              <Link2 className="mx-auto h-12 w-12 text-slate-400" />
-
-              <h2 className="mt-4 text-xl font-bold text-slate-900">
-                No Footer Links
-              </h2>
-
-              <p className="mt-2 text-slate-500">
-                Add the first footer link to create a footer column.
-              </p>
+        {groupedItems.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <Link2 className="size-7" />
             </div>
-          ) : (
-            groupedItems.map((group) => (
-              <div
+
+            <h2 className="mt-5 text-xl font-bold text-slate-950">
+              No Footer Links
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+              Add the first footer link to create a footer column.
+            </p>
+
+            <button
+              type="button"
+              onClick={openCreateForm}
+              className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Plus className="size-4" />
+              Add Footer Link
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-2">
+            {groupedItems.map((group) => (
+              <FormCard
                 key={group.groupName}
-                className="overflow-hidden rounded-xl bg-white shadow-sm"
+                title={group.groupName}
+                description={`${group.links.length} ${
+                  group.links.length === 1 ? "link" : "links"
+                } in this footer column.`}
+                action={
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                    <FolderKanban className="size-5" />
+                  </div>
+                }
               >
-                <div className="border-b border-slate-200 px-5 py-4">
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {group.groupName}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    {group.links.length}{" "}
-                    {group.links.length === 1 ? "link" : "links"}
-                  </p>
-                </div>
-
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -561,7 +664,7 @@ export default function AdminFooterLinks() {
                     items={group.links.map((item) => item.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="divide-y divide-slate-100">
+                    <div className="space-y-3">
                       {group.links.map((item) => (
                         <SortableFooterLinkRow
                           key={item.id}
@@ -579,10 +682,27 @@ export default function AdminFooterLinks() {
                     </div>
                   </SortableContext>
                 </DndContext>
-              </div>
-            ))
-          )}
-        </div>
+              </FormCard>
+            ))}
+          </div>
+        )}
+
+        <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+              <CheckCircle2 className="size-5" />
+            </div>
+
+            <div>
+              <h2 className="font-extrabold text-slate-950">Footer guidance</h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Keep group names consistent, use short link labels, and open
+                only genuinely external destinations in a new tab.
+              </p>
+            </div>
+          </div>
+        </section>
       </section>
     </>
   )
@@ -613,71 +733,67 @@ function SortableFooterLinkRow({
   })
 
   return (
-    <div
+    <article
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={`grid gap-4 px-5 py-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center ${
-        isDragging ? "relative z-10 bg-blue-50 shadow-lg" : "bg-white"
+      className={`rounded-2xl border p-4 transition ${
+        isDragging
+          ? "relative z-10 border-blue-300 bg-blue-50 shadow-xl"
+          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
       }`}
     >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="inline-flex h-10 w-10 cursor-grab touch-none items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-blue-50 hover:text-blue-700 active:cursor-grabbing"
-        aria-label={`Drag ${item.title}`}
-      >
-        <GripVertical className="h-5 w-5" />
-      </button>
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="inline-flex size-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 active:cursor-grabbing"
+          aria-label={`Drag ${item.title}`}
+        >
+          <GripVertical className="size-5" />
+        </button>
 
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-bold text-slate-900">{item.title}</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-extrabold text-slate-950">{item.title}</h3>
 
-          <span
-            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-              item.is_visible
-                ? "bg-green-100 text-green-700"
-                : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {item.is_visible ? "Visible" : "Hidden"}
-          </span>
+            <VisibilityBadge isVisible={item.is_visible} />
 
-          {item.open_in_new_tab && (
-            <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700">
-              <ExternalLink className="mr-1 h-3 w-3" />
-              New Tab
-            </span>
-          )}
+            {item.open_in_new_tab && (
+              <span className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200 ring-inset">
+                <ExternalLink className="mr-1 size-3" />
+                New Tab
+              </span>
+            )}
+          </div>
+
+          <p className="mt-2 truncate font-mono text-sm text-slate-500">
+            {item.url}
+          </p>
+
+          <p className="mt-1 text-xs font-semibold text-slate-400">
+            Position {item.display_order}
+          </p>
         </div>
-
-        <p className="mt-1 truncate font-mono text-sm text-slate-500">
-          {item.url}
-        </p>
-
-        <p className="mt-1 text-xs text-slate-400">
-          Position {item.display_order}
-        </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 md:justify-end">
+      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
         <button
           type="button"
           disabled={isBusy}
           onClick={onToggleVisibility}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+          className="inline-flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
           title={item.is_visible ? "Hide link" : "Show link"}
         >
           {isBusy ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <LoaderCircle className="size-4 animate-spin" />
           ) : item.is_visible ? (
-            <Eye className="h-4 w-4" />
+            <Eye className="size-4" />
           ) : (
-            <EyeOff className="h-4 w-4" />
+            <EyeOff className="size-4" />
           )}
         </button>
 
@@ -685,23 +801,137 @@ function SortableFooterLinkRow({
           type="button"
           disabled={isBusy}
           onClick={onEdit}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-blue-200 text-blue-700 transition hover:bg-blue-50 disabled:opacity-50"
+          className="inline-flex size-10 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
           title="Edit link"
         >
-          <Pencil className="h-4 w-4" />
+          <Pencil className="size-4" />
         </button>
 
         <button
           type="button"
           disabled={isBusy}
           onClick={onDelete}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+          className="inline-flex size-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:opacity-50"
           title="Delete link"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="size-4" />
         </button>
       </div>
+    </article>
+  )
+}
+
+function VisibilityBadge({ isVisible }: { isVisible: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${
+        isVisible
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          : "bg-slate-100 text-slate-600 ring-slate-200"
+      }`}
+    >
+      <span
+        className={`size-1.5 rounded-full ${
+          isVisible ? "bg-emerald-500" : "bg-slate-400"
+        }`}
+      />
+
+      {isVisible ? "Visible" : "Hidden"}
+    </span>
+  )
+}
+
+function SummaryCard({
+  label,
+  value,
+  description,
+  icon,
+  tone = "default",
+}: {
+  label: string
+  value: number
+  description: string
+  icon: ReactNode
+  tone?: "default" | "success" | "neutral" | "featured"
+}) {
+  const toneClasses = {
+    default: "bg-blue-50 text-blue-700",
+    success: "bg-emerald-50 text-emerald-700",
+    neutral: "bg-slate-100 text-slate-700",
+    featured: "bg-violet-50 text-violet-700",
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+
+          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            {value}
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+        </div>
+
+        <div className={`rounded-xl p-3 ${toneClasses[tone]}`}>{icon}</div>
+      </div>
     </div>
+  )
+}
+
+function ToggleCard({
+  title,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  title: string
+  description: string
+  checked: boolean
+  disabled: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+        checked
+          ? "border-blue-200 bg-blue-50/70"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="sr-only"
+      />
+
+      <span
+        aria-hidden="true"
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-blue-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
+
+      <span>
+        <span className="block text-sm font-extrabold text-slate-950">
+          {title}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          {description}
+        </span>
+      </span>
+    </label>
   )
 }
 
@@ -736,67 +966,6 @@ function normalizeOrders(items: AdminFooterLink[]): AdminFooterLink[] {
   return normalized
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-    </div>
-  )
-}
-
-function FormField({
-  label,
-  required = false,
-  children,
-}: {
-  label: string
-  required?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block font-medium text-slate-700">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
-
-      {children}
-    </label>
-  )
-}
-
-function CheckboxCard({
-  title,
-  description,
-  checked,
-  onChange,
-}: {
-  title: string
-  description: string
-  checked: boolean
-  onChange: (checked: boolean) => void
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4"
-      />
-
-      <span>
-        <span className="block font-semibold text-slate-900">{title}</span>
-
-        <span className="mt-1 block text-sm leading-6 text-slate-500">
-          {description}
-        </span>
-      </span>
-    </label>
-  )
-}
-
 function isValidUrl(value: string): boolean {
   return (
     value.startsWith("/") ||
@@ -828,4 +997,4 @@ function showApiError(error: unknown, fallbackMessage: string) {
 }
 
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

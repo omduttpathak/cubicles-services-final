@@ -1,14 +1,18 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import axios from "axios"
 import {
   BriefcaseBusiness,
   CheckCircle2,
   Eye,
+  FileText,
   Filter,
   Save,
   Search,
+  Settings2,
+  Sparkles,
   Tags,
 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 import {
@@ -16,6 +20,10 @@ import {
   updateAdminCaseStudiesPage,
   type UpdateAdminCaseStudiesPageRequest,
 } from "@/api/adminCaseStudiesPageApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
@@ -66,6 +74,8 @@ const requiredStringFields: Array<keyof UpdateAdminCaseStudiesPageRequest> = [
 ]
 
 export default function AdminCaseStudiesPage() {
+  const navigate = useNavigate()
+
   const [formData, setFormData] =
     useState<UpdateAdminCaseStudiesPageRequest>(initialFormData)
 
@@ -117,11 +127,9 @@ export default function AdminCaseStudiesPage() {
 
       const payload = trimCaseStudiesPageData(formData)
       const updated = await updateAdminCaseStudiesPage(payload)
-
       const { id: _id, ...settings } = updated
 
       setFormData(settings)
-
       toast.success("Case Studies page settings updated successfully.")
     } catch (error) {
       console.error(error)
@@ -158,6 +166,28 @@ export default function AdminCaseStudiesPage() {
     void loadCaseStudiesPage()
   }, [])
 
+  const completedFields = useMemo(
+    () =>
+      requiredStringFields.filter((field) => {
+        const value = formData[field]
+
+        return typeof value === "string" && Boolean(value.trim())
+      }).length,
+    [formData]
+  )
+
+  const completionPercentage = Math.round(
+    (completedFields / requiredStringFields.length) * 100
+  )
+
+  const visibleSections = [
+    formData.show_hero,
+    formData.show_filters,
+    formData.show_case_studies,
+    formData.show_results,
+    formData.show_technologies,
+  ].filter(Boolean).length
+
   if (isLoading) {
     return <PageLoader message="Loading Case Studies page settings..." />
   }
@@ -181,49 +211,35 @@ export default function AdminCaseStudiesPage() {
         description="Manage the public Case Studies page content, visibility and SEO."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold tracking-wider text-blue-600 uppercase">
-              Content Management
-            </p>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Content management"
+          title="Case Studies Page"
+          description="Manage the public Case Studies page hero, filters, card labels, empty states, visibility, and search metadata."
+          backLabel="Back to Case Studies"
+          onBack={() => navigate("/admin/case-studies")}
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={isSubmitting}
+          onSubmit={() => {
+            void handleSubmit()
+          }}
+        />
 
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Case Studies Page
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Manage the Case Studies page hero, filters, card labels, empty
-              states, visibility and SEO.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Save className="mr-2 h-4 w-4" />
-
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <Panel
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Hero Section"
-              description="Manage the introduction displayed at the top of the Case Studies page."
+            <SectionCard
+              icon={<BriefcaseBusiness className="size-5" />}
+              title="Hero section"
+              description="Manage the introduction displayed at the top of the public Case Studies page."
             >
               <TextField
                 id="case-studies-page-hero-eyebrow"
                 label="Hero Eyebrow"
                 value={formData.hero_eyebrow}
                 maxLength={255}
+                placeholder="Client Success"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("hero_eyebrow", value)}
               />
 
@@ -232,6 +248,8 @@ export default function AdminCaseStudiesPage() {
                 label="Hero Title"
                 value={formData.hero_title}
                 maxLength={500}
+                placeholder="Technology Transformation Case Studies"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("hero_title", value)}
               />
 
@@ -241,25 +259,24 @@ export default function AdminCaseStudiesPage() {
                 value={formData.hero_description}
                 rows={6}
                 maxLength={1000}
+                placeholder="Describe the value and outcomes visitors will discover on this page."
+                disabled={isSubmitting}
                 onChange={(value) => updateField("hero_description", value)}
               />
+            </SectionCard>
 
-              <CharacterCount
-                current={formData.hero_description.length}
-                maximum={1000}
-              />
-            </Panel>
-
-            <Panel
-              icon={<Filter className="h-5 w-5" />}
-              title="Search and Filters"
-              description="Customize the search and industry-filter controls."
+            <SectionCard
+              icon={<Filter className="size-5" />}
+              title="Search and filters"
+              description="Customize the search input and industry-filter controls."
             >
               <TextField
                 id="case-studies-page-search-placeholder"
                 label="Search Placeholder"
                 value={formData.search_placeholder}
                 maxLength={255}
+                placeholder="Search case studies..."
+                disabled={isSubmitting}
                 onChange={(value) => updateField("search_placeholder", value)}
               />
 
@@ -268,6 +285,8 @@ export default function AdminCaseStudiesPage() {
                 label="All Industries Label"
                 value={formData.all_industries_label}
                 maxLength={150}
+                placeholder="All Industries"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("all_industries_label", value)}
               />
 
@@ -276,20 +295,24 @@ export default function AdminCaseStudiesPage() {
                 label="Clear Filters Text"
                 value={formData.clear_filters_text}
                 maxLength={150}
+                placeholder="Clear Filters"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("clear_filters_text", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<CheckCircle2 className="h-5 w-5" />}
-              title="Case Study Card Labels"
-              description="Manage the results heading and detail-button text."
+            <SectionCard
+              icon={<CheckCircle2 className="size-5" />}
+              title="Case-study card labels"
+              description="Manage the heading for outcomes and the action shown on each card."
             >
               <TextField
                 id="case-studies-page-results-heading"
                 label="Results Heading"
                 value={formData.results_heading}
                 maxLength={150}
+                placeholder="Key Results"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("results_heading", value)}
               />
 
@@ -298,20 +321,24 @@ export default function AdminCaseStudiesPage() {
                 label="View Button Text"
                 value={formData.view_button_text}
                 maxLength={150}
+                placeholder="View Case Study"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("view_button_text", value)}
               />
-            </Panel>
+            </SectionCard>
 
-            <Panel
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Empty States"
-              description="Content displayed when no case studies are available or filters return no results."
+            <SectionCard
+              icon={<FileText className="size-5" />}
+              title="Empty states"
+              description="Configure what visitors see when case studies are unavailable or filters return no matches."
             >
               <TextField
                 id="case-studies-page-empty-title"
                 label="Empty State Title"
                 value={formData.empty_title}
                 maxLength={255}
+                placeholder="No Case Studies Found"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("empty_title", value)}
               />
 
@@ -321,12 +348,9 @@ export default function AdminCaseStudiesPage() {
                 value={formData.empty_description}
                 rows={4}
                 maxLength={500}
+                placeholder="Published case studies will appear here."
+                disabled={isSubmitting}
                 onChange={(value) => updateField("empty_description", value)}
-              />
-
-              <CharacterCount
-                current={formData.empty_description.length}
-                maximum={500}
               />
 
               <TextAreaField
@@ -335,33 +359,27 @@ export default function AdminCaseStudiesPage() {
                 value={formData.filtered_empty_description}
                 rows={4}
                 maxLength={500}
+                placeholder="No case studies match the selected filters."
+                disabled={isSubmitting}
                 onChange={(value) =>
                   updateField("filtered_empty_description", value)
                 }
               />
+            </SectionCard>
 
-              <CharacterCount
-                current={formData.filtered_empty_description.length}
-                maximum={500}
-              />
-            </Panel>
-
-            <Panel
-              icon={<Search className="h-5 w-5" />}
-              title="Search Engine Optimization"
-              description="Metadata used by search engines and social previews."
+            <SectionCard
+              icon={<Search className="size-5" />}
+              title="Search engine optimization"
+              description="Control the metadata used by search engines and social previews."
             >
               <TextField
                 id="case-studies-page-seo-title"
                 label="SEO Title"
                 value={formData.seo_title}
                 maxLength={255}
+                placeholder="Case Studies | Cubicles Services"
+                disabled={isSubmitting}
                 onChange={(value) => updateField("seo_title", value)}
-              />
-
-              <CharacterCount
-                current={formData.seo_title.length}
-                maximum={255}
               />
 
               <TextAreaField
@@ -370,110 +388,146 @@ export default function AdminCaseStudiesPage() {
                 value={formData.seo_description}
                 rows={5}
                 maxLength={500}
+                placeholder="Describe the public Case Studies page for search engines."
+                disabled={isSubmitting}
                 onChange={(value) => updateField("seo_description", value)}
               />
 
-              <CharacterCount
-                current={formData.seo_description.length}
-                maximum={500}
+              <SearchPreview
+                title={formData.seo_title}
+                description={formData.seo_description}
               />
-            </Panel>
+            </SectionCard>
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                  <Eye className="h-6 w-6" />
+            <section className="sticky top-24 space-y-6">
+              <FormCard
+                title="Save changes"
+                description="Apply the current content, visibility, and SEO settings to the public Case Studies page."
+              >
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    void handleSubmit()
+                  }}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Save className="mr-2 size-4" />
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </FormCard>
+
+              <FormCard
+                title="Page visibility"
+                description="Control which sections and details appear on the public Case Studies page."
+              >
+                <div className="space-y-3">
+                  <ToggleField
+                    title="Case Studies Page Active"
+                    description="Keep enabled so the public page can load these settings."
+                    checked={formData.is_active}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("is_active", checked)}
+                  />
+
+                  <ToggleField
+                    title="Show Hero Section"
+                    description="Display the Case Studies page introduction."
+                    checked={formData.show_hero}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("show_hero", checked)}
+                  />
+
+                  <ToggleField
+                    title="Show Filters"
+                    description="Display search and industry controls."
+                    checked={formData.show_filters}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("show_filters", checked)}
+                  />
+
+                  <ToggleField
+                    title="Show Case Studies"
+                    description="Display published case-study cards."
+                    checked={formData.show_case_studies}
+                    disabled={isSubmitting}
+                    onChange={(checked) =>
+                      updateField("show_case_studies", checked)
+                    }
+                  />
+
+                  <ToggleField
+                    title="Show Results"
+                    description="Display key results on case-study cards."
+                    checked={formData.show_results}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("show_results", checked)}
+                  />
+
+                  <ToggleField
+                    title="Show Technologies"
+                    description="Display technology tags on case-study cards."
+                    checked={formData.show_technologies}
+                    disabled={isSubmitting}
+                    onChange={(checked) =>
+                      updateField("show_technologies", checked)
+                    }
+                  />
                 </div>
+              </FormCard>
 
-                <div>
-                  <h2 className="font-bold text-slate-900">Page Visibility</h2>
+              <CompletionCard
+                completedFields={completedFields}
+                totalFields={requiredStringFields.length}
+                percentage={completionPercentage}
+                visibleSections={visibleSections}
+                isActive={formData.is_active}
+              />
 
-                  <p className="text-sm text-slate-500">
-                    Control the public Case Studies page.
-                  </p>
+              <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                    <Tags className="size-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Case-study records
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Individual case studies, industries, services, results,
+                      technologies, images, and publication status are managed
+                      from Case Studies in the admin sidebar.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="mt-6 space-y-4">
-                <ToggleField
-                  title="Case Studies Page Active"
-                  description="Keep enabled so the public Case Studies page can load these settings."
-                  checked={formData.is_active}
-                  onChange={(checked) => updateField("is_active", checked)}
-                />
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-amber-600 shadow-sm ring-1 ring-amber-100">
+                    <Settings2 className="size-5" />
+                  </div>
 
-                <ToggleField
-                  title="Show Hero Section"
-                  description="Display the Case Studies page introduction."
-                  checked={formData.show_hero}
-                  onChange={(checked) => updateField("show_hero", checked)}
-                />
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Public card content
+                    </h2>
 
-                <ToggleField
-                  title="Show Filters"
-                  description="Display search and industry controls."
-                  checked={formData.show_filters}
-                  onChange={(checked) => updateField("show_filters", checked)}
-                />
-
-                <ToggleField
-                  title="Show Case Studies"
-                  description="Display published case-study cards."
-                  checked={formData.show_case_studies}
-                  onChange={(checked) =>
-                    updateField("show_case_studies", checked)
-                  }
-                />
-
-                <ToggleField
-                  title="Show Results"
-                  description="Display key results on case-study cards."
-                  checked={formData.show_results}
-                  onChange={(checked) => updateField("show_results", checked)}
-                />
-
-                <ToggleField
-                  title="Show Technologies"
-                  description="Display technology tags on case-study cards."
-                  checked={formData.show_technologies}
-                  onChange={(checked) =>
-                    updateField("show_technologies", checked)
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <div className="flex items-start gap-3">
-                <Tags className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-
-                <div>
-                  <h2 className="font-bold text-slate-900">
-                    Case Study Records
-                  </h2>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Individual case studies, industries, services, results,
-                    technologies, images and publication status are managed from
-                    Case Studies in the admin sidebar.
-                  </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Card-level visibility settings on this page affect every
+                      published case study displayed in the listing.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-              <h2 className="font-bold text-slate-900">Public Card Content</h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                The card-level visibility settings on this page affect every
-                published case study displayed in the listing.
-              </p>
-            </div>
+              </section>
+            </section>
           </aside>
         </div>
-      </section>
+      </div>
     </>
   )
 }
@@ -494,28 +548,26 @@ function trimCaseStudiesPageData(
   return trimmed
 }
 
-type PanelProps = {
+type SectionCardProps = {
   icon: ReactNode
   title: string
   description: string
   children: ReactNode
 }
 
-function Panel({ icon, title, description, children }: PanelProps) {
+function SectionCard({ icon, title, description, children }: SectionCardProps) {
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-blue-50 p-2.5 text-blue-600">{icon}</div>
-
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
+    <FormCard
+      title={title}
+      description={description}
+      action={
+        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          {icon}
         </div>
-      </div>
-
-      <div className="mt-6 space-y-5">{children}</div>
-    </div>
+      }
+    >
+      <div className="space-y-5">{children}</div>
+    </FormCard>
   )
 }
 
@@ -524,21 +576,39 @@ type TextFieldProps = {
   label: string
   value: string
   maxLength?: number
+  placeholder?: string
+  disabled?: boolean
   onChange: (value: string) => void
 }
 
-function TextField({ id, label, value, maxLength, onChange }: TextFieldProps) {
+function TextField({
+  id,
+  label,
+  value,
+  maxLength,
+  placeholder,
+  disabled = false,
+  onChange,
+}: TextFieldProps) {
   return (
-    <FormField id={id} label={label} required>
-      <input
-        id={id}
-        type="text"
-        value={value}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        className={inputClassName}
-      />
-    </FormField>
+    <div className="space-y-2">
+      <FormField id={id} label={label} required>
+        <input
+          id={id}
+          type="text"
+          value={value}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className={inputClassName}
+        />
+      </FormField>
+
+      {typeof maxLength === "number" && (
+        <CharacterCount current={value.length} maximum={maxLength} />
+      )}
+    </div>
   )
 }
 
@@ -548,6 +618,8 @@ type TextAreaFieldProps = {
   value: string
   rows: number
   maxLength?: number
+  placeholder?: string
+  disabled?: boolean
   onChange: (value: string) => void
 }
 
@@ -557,39 +629,28 @@ function TextAreaField({
   value,
   rows,
   maxLength,
+  placeholder,
+  disabled = false,
   onChange,
 }: TextAreaFieldProps) {
   return (
-    <FormField id={id} label={label} required>
-      <textarea
-        id={id}
-        rows={rows}
-        value={value}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${inputClassName} leading-7`}
-      />
-    </FormField>
-  )
-}
+    <div className="space-y-2">
+      <FormField id={id} label={label} required>
+        <textarea
+          id={id}
+          rows={rows}
+          value={value}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${inputClassName} leading-7`}
+        />
+      </FormField>
 
-type FormFieldProps = {
-  id: string
-  label: string
-  required?: boolean
-  children: ReactNode
-}
-
-function FormField({ id, label, required = false, children }: FormFieldProps) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-
-        {required && <span className="text-red-600"> *</span>}
-      </label>
-
-      {children}
+      {typeof maxLength === "number" && (
+        <CharacterCount current={value.length} maximum={maxLength} />
+      )}
     </div>
   )
 }
@@ -598,6 +659,7 @@ type ToggleFieldProps = {
   title: string
   description: string
   checked: boolean
+  disabled?: boolean
   onChange: (checked: boolean) => void
 }
 
@@ -605,21 +667,44 @@ function ToggleField({
   title,
   description,
   checked,
+  disabled = false,
   onChange,
 }: ToggleFieldProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:bg-slate-50">
+    <label
+      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+        checked
+          ? "border-blue-200 bg-blue-50/70"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4"
+        className="peer sr-only"
       />
 
-      <span>
-        <span className="block font-semibold text-slate-900">{title}</span>
+      <span
+        aria-hidden="true"
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-blue-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
 
-        <span className="mt-1 block text-sm leading-6 text-slate-500">
+      <span className="min-w-0">
+        <span className="block text-sm font-extrabold text-slate-950">
+          {title}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
           {description}
         </span>
       </span>
@@ -627,19 +712,127 @@ function ToggleField({
   )
 }
 
-function CharacterCount({
-  current,
-  maximum,
-}: {
-  current: number
-  maximum: number
-}) {
+type CompletionCardProps = {
+  completedFields: number
+  totalFields: number
+  percentage: number
+  visibleSections: number
+  isActive: boolean
+}
+
+function CompletionCard({
+  completedFields,
+  totalFields,
+  percentage,
+  visibleSections,
+  isActive,
+}: CompletionCardProps) {
   return (
-    <p className="-mt-3 text-right text-xs text-slate-500">
-      {current}/{maximum}
-    </p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-extrabold text-slate-950">
+            Page readiness
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {completedFields} of {totalFields} required fields completed
+          </p>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="size-5" />
+        </div>
+      </div>
+
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <StatusMetric
+          label="Completion"
+          value={`${percentage}%`}
+          icon={<FileText className="size-4" />}
+        />
+
+        <StatusMetric
+          label="Visible items"
+          value={`${visibleSections}/5`}
+          icon={<Eye className="size-4" />}
+        />
+      </div>
+
+      <div
+        className={`mt-3 rounded-xl border px-4 py-3 text-sm font-bold ${
+          isActive
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            : "border-amber-200 bg-amber-50 text-amber-700"
+        }`}
+      >
+        {isActive
+          ? "Case Studies page is active"
+          : "Case Studies page is inactive"}
+      </div>
+    </section>
+  )
+}
+
+type StatusMetricProps = {
+  label: string
+  value: string
+  icon: ReactNode
+}
+
+function StatusMetric({ label, value, icon }: StatusMetricProps) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center gap-2 text-slate-500">
+        {icon}
+
+        <span className="text-[11px] font-bold tracking-[0.12em] uppercase">
+          {label}
+        </span>
+      </div>
+
+      <p className="mt-2 text-lg font-black text-slate-950">{value}</p>
+    </div>
+  )
+}
+
+type SearchPreviewProps = {
+  title: string
+  description: string
+}
+
+function SearchPreview({ title, description }: SearchPreviewProps) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-slate-500 uppercase">
+        <Sparkles className="size-3.5" />
+        Search preview
+      </div>
+
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <p className="truncate text-xs text-emerald-700">
+          cubiclesservices.com › case-studies
+        </p>
+
+        <p className="mt-1 line-clamp-2 text-lg font-medium text-blue-700">
+          {title || "Case Studies | Cubicles Services"}
+        </p>
+
+        <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">
+          {description ||
+            "Add an SEO description to preview how the Case Studies page may appear in search results."}
+        </p>
+      </div>
+    </section>
   )
 }
 
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

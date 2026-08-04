@@ -1,6 +1,20 @@
-import { useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import axios from "axios"
-import { ArrowLeft, Save, Send } from "lucide-react"
+import {
+  BriefcaseBusiness,
+  CheckCircle2,
+  FileText,
+  Globe2,
+  ImageIcon,
+  Layers3,
+  Save,
+  Search,
+  Send,
+  Settings2,
+  Sparkles,
+  Trophy,
+  Wrench,
+} from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
@@ -8,9 +22,30 @@ import {
   createAdminCaseStudy,
   type CreateAdminCaseStudyRequest,
 } from "@/api/adminCaseStudiesApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
 import ImageUploader from "@/components/admin/ImageUploader"
 import RichTextEditor from "@/components/admin/RichTextEditor"
 import SEO from "@/components/seo/SEO"
+
+const initialFormData: CreateAdminCaseStudyRequest = {
+  title: "",
+  slug: "",
+  industry: "",
+  service: "",
+  summary: "",
+  challenge: "",
+  solution: "",
+  results: [],
+  technologies: [],
+  image_url: null,
+  seo_title: "",
+  seo_description: "",
+  is_published: false,
+  published_at: null,
+}
 
 function createSlug(value: string): string {
   return value
@@ -71,23 +106,8 @@ function getValidationMessage(detail: unknown): string {
 export default function AdminCaseStudyCreate() {
   const navigate = useNavigate()
 
-  const [formData, setFormData] = useState<CreateAdminCaseStudyRequest>({
-    title: "",
-    slug: "",
-    industry: "",
-    service: "",
-    summary: "",
-    challenge: "",
-    solution: "",
-    results: [],
-    technologies: [],
-    image_url: null,
-    seo_title: "",
-    seo_description: "",
-    is_published: false,
-    published_at: null,
-  })
-
+  const [formData, setFormData] =
+    useState<CreateAdminCaseStudyRequest>(initialFormData)
   const [resultsText, setResultsText] = useState("")
   const [technologiesText, setTechnologiesText] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -239,6 +259,28 @@ export default function AdminCaseStudyCreate() {
     }
   }
 
+  const requiredChecks = useMemo(
+    () => [
+      formData.title.trim().length >= 3,
+      createSlug(formData.slug).length >= 3,
+      formData.industry.trim().length >= 2,
+      formData.service.trim().length >= 2,
+      formData.summary.trim().length >= 10,
+      getPlainText(formData.challenge).length >= 20,
+      getPlainText(formData.solution).length >= 20,
+      splitLines(resultsText).length > 0,
+      splitLines(technologiesText).length > 0,
+      formData.seo_title.trim().length >= 3,
+      formData.seo_description.trim().length >= 10,
+    ],
+    [formData, resultsText, technologiesText]
+  )
+
+  const completedFields = requiredChecks.filter(Boolean).length
+  const completionPercentage = Math.round(
+    (completedFields / requiredChecks.length) * 100
+  )
+
   return (
     <>
       <SEO
@@ -246,328 +288,545 @@ export default function AdminCaseStudyCreate() {
         description="Create a new Cubicles Services case study."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <button
-              type="button"
-              onClick={() => navigate("/admin/case-studies")}
-              className="inline-flex items-center text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Case Studies
-            </button>
-
-            <h1 className="mt-3 text-2xl font-bold text-slate-900">
-              Create Case Study
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Save the case study as a draft or publish it immediately.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => {
-                void submitCaseStudy(false)
-              }}
-              className="inline-flex items-center rounded-lg border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {isSubmitting && submitMode === "draft"
-                ? "Saving Draft..."
-                : "Save Draft"}
-            </button>
-
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => {
-                void submitCaseStudy(true)
-              }}
-              className="inline-flex items-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {isSubmitting && submitMode === "publish"
-                ? "Publishing..."
-                : "Publish"}
-            </button>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Case study management"
+          title="Create Case Study"
+          description="Build a customer success story, optimize it for search, and save it as a draft or publish it immediately."
+          backLabel="Back to Case Studies"
+          onBack={() => navigate("/admin/case-studies")}
+          submitLabel="Publish"
+          submittingLabel="Saving..."
+          isSubmitting={isSubmitting}
+          onSubmit={() => {
+            void submitCaseStudy(true)
+          }}
+        />
 
         {formError && (
           <div
             role="alert"
-            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700"
+            className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700 shadow-sm"
           >
             {formError}
           </div>
         )}
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Case Study Content
-              </h2>
+            <SectionCard
+              icon={<BriefcaseBusiness className="size-5" />}
+              title="Case study overview"
+              description="Define the story title, URL, industry, service, and summary."
+            >
+              <FormField id="case-study-title" label="Title" required>
+                <input
+                  id="case-study-title"
+                  type="text"
+                  maxLength={255}
+                  value={formData.title}
+                  onChange={(event) => handleTitleChange(event.target.value)}
+                  className={inputClassName}
+                  placeholder="Enter the case study title"
+                  disabled={isSubmitting}
+                />
+              </FormField>
 
-              <div className="mt-6 space-y-5">
-                <div>
-                  <label
-                    htmlFor="case-study-title"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    Title *
-                  </label>
-
-                  <input
-                    id="case-study-title"
-                    type="text"
-                    value={formData.title}
-                    onChange={(event) => handleTitleChange(event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="case-study-slug"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    Slug *
-                  </label>
+              <FormField
+                id="case-study-slug"
+                label="Slug"
+                required
+                description={`Public URL: /case-studies/${
+                  formData.slug || "case-study-slug"
+                }`}
+              >
+                <div className="relative">
+                  <Globe2 className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
 
                   <input
                     id="case-study-slug"
                     type="text"
+                    maxLength={255}
                     value={formData.slug}
                     onChange={(event) =>
                       updateField("slug", createSlug(event.target.value))
                     }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Public URL: /case-studies/
-                    {formData.slug || "case-study-slug"}
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="case-study-summary"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    Summary *
-                  </label>
-
-                  <textarea
-                    id="case-study-summary"
-                    rows={4}
-                    maxLength={500}
-                    value={formData.summary}
-                    onChange={(event) =>
-                      updateField("summary", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-
-                  <p className="mt-1 text-right text-xs text-slate-500">
-                    {formData.summary.length}/500
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-medium text-slate-700">
-                    Challenge *
-                  </label>
-
-                  <RichTextEditor
-                    value={formData.challenge}
-                    onChange={(value) => updateField("challenge", value)}
-                    placeholder="Describe the customer's business and technical challenge..."
+                    className={`${inputClassName} pl-12 font-mono text-sm`}
                     disabled={isSubmitting}
                   />
                 </div>
+              </FormField>
 
-                <div>
-                  <label className="mb-2 block font-medium text-slate-700">
-                    Solution *
-                  </label>
-
-                  <RichTextEditor
-                    value={formData.solution}
-                    onChange={(value) => updateField("solution", value)}
-                    placeholder="Describe the solution delivered by Cubicles Services..."
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="case-study-results"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    Results *
-                  </label>
-
-                  <textarea
-                    id="case-study-results"
-                    rows={6}
-                    value={resultsText}
-                    onChange={(event) => setResultsText(event.target.value)}
-                    placeholder="Enter one result per line"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 leading-7 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Enter each result on a separate line.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Search Engine Optimization
-              </h2>
-
-              <div className="mt-6 space-y-5">
-                <div>
-                  <label
-                    htmlFor="case-study-seo-title"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    SEO Title *
-                  </label>
-
-                  <input
-                    id="case-study-seo-title"
-                    type="text"
-                    maxLength={255}
-                    value={formData.seo_title}
-                    onChange={(event) =>
-                      updateField("seo_title", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="case-study-seo-description"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    SEO Description *
-                  </label>
-
-                  <textarea
-                    id="case-study-seo-description"
-                    rows={4}
-                    maxLength={500}
-                    value={formData.seo_description}
-                    onChange={(event) =>
-                      updateField("seo_description", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Case Study Settings
-              </h2>
-
-              <div className="mt-6 space-y-5">
-                <div>
-                  <label
-                    htmlFor="case-study-industry"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    Industry *
-                  </label>
-
+              <div className="grid gap-5 md:grid-cols-2">
+                <FormField id="case-study-industry" label="Industry" required>
                   <input
                     id="case-study-industry"
                     type="text"
+                    maxLength={150}
                     value={formData.industry}
                     onChange={(event) =>
                       updateField("industry", event.target.value)
                     }
                     placeholder="Financial Services, Retail..."
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className={inputClassName}
+                    disabled={isSubmitting}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label
-                    htmlFor="case-study-service"
-                    className="mb-2 block font-medium text-slate-700"
-                  >
-                    Service *
-                  </label>
-
+                <FormField id="case-study-service" label="Service" required>
                   <input
                     id="case-study-service"
                     type="text"
+                    maxLength={150}
                     value={formData.service}
                     onChange={(event) =>
                       updateField("service", event.target.value)
                     }
                     placeholder="Cloud Migration, DevOps Engineering..."
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className={inputClassName}
+                    disabled={isSubmitting}
                   />
-                </div>
+                </FormField>
+              </div>
 
-                <div>
-                  <label
-                    htmlFor="case-study-technologies"
-                    className="mb-2 block font-medium text-slate-700"
+              <FormField
+                id="case-study-summary"
+                label="Summary"
+                required
+                description="Write a concise overview for listing cards and previews."
+              >
+                <textarea
+                  id="case-study-summary"
+                  rows={5}
+                  maxLength={500}
+                  value={formData.summary}
+                  onChange={(event) =>
+                    updateField("summary", event.target.value)
+                  }
+                  className={inputClassName}
+                  disabled={isSubmitting}
+                />
+
+                <CharacterCount
+                  current={formData.summary.length}
+                  maximum={500}
+                />
+              </FormField>
+            </SectionCard>
+
+            <SectionCard
+              icon={<Layers3 className="size-5" />}
+              title="Challenge and solution"
+              description="Explain the customer challenge and how Cubicles Services solved it."
+            >
+              <RichEditorField
+                label="Challenge"
+                value={formData.challenge}
+                placeholder="Describe the customer's business and technical challenge..."
+                disabled={isSubmitting}
+                onChange={(value) => updateField("challenge", value)}
+              />
+
+              <RichEditorField
+                label="Solution"
+                value={formData.solution}
+                placeholder="Describe the solution delivered by Cubicles Services..."
+                disabled={isSubmitting}
+                onChange={(value) => updateField("solution", value)}
+              />
+            </SectionCard>
+
+            <SectionCard
+              icon={<Trophy className="size-5" />}
+              title="Results"
+              description="Add measurable outcomes and customer value, one result per line."
+            >
+              <FormField
+                id="case-study-results"
+                label="Results"
+                required
+                description="Each non-empty line becomes one result item."
+              >
+                <textarea
+                  id="case-study-results"
+                  rows={7}
+                  value={resultsText}
+                  onChange={(event) => setResultsText(event.target.value)}
+                  placeholder={
+                    "Reduced deployment time by 60%\nImproved platform reliability\nLowered infrastructure costs"
+                  }
+                  className={`${inputClassName} leading-7`}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <ListPreview
+                title="Result preview"
+                items={splitLines(resultsText)}
+                emptyMessage="Add results above to preview them here."
+              />
+            </SectionCard>
+
+            <SectionCard
+              icon={<Search className="size-5" />}
+              title="Search engine optimization"
+              description="Control how the case study appears in search results and shared links."
+            >
+              <FormField id="case-study-seo-title" label="SEO Title" required>
+                <input
+                  id="case-study-seo-title"
+                  type="text"
+                  maxLength={255}
+                  value={formData.seo_title}
+                  onChange={(event) =>
+                    updateField("seo_title", event.target.value)
+                  }
+                  className={inputClassName}
+                  disabled={isSubmitting}
+                />
+
+                <CharacterCount
+                  current={formData.seo_title.length}
+                  maximum={255}
+                />
+              </FormField>
+
+              <FormField
+                id="case-study-seo-description"
+                label="SEO Description"
+                required
+              >
+                <textarea
+                  id="case-study-seo-description"
+                  rows={5}
+                  maxLength={500}
+                  value={formData.seo_description}
+                  onChange={(event) =>
+                    updateField("seo_description", event.target.value)
+                  }
+                  className={inputClassName}
+                  disabled={isSubmitting}
+                />
+
+                <CharacterCount
+                  current={formData.seo_description.length}
+                  maximum={500}
+                />
+              </FormField>
+
+              <SearchPreview
+                title={formData.seo_title}
+                slug={formData.slug}
+                description={formData.seo_description}
+              />
+            </SectionCard>
+          </div>
+
+          <aside className="space-y-6">
+            <section className="sticky top-24 space-y-6">
+              <FormCard
+                title="Publishing actions"
+                description="Save the case study privately or publish it immediately."
+              >
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      void submitCaseStudy(true)
+                    }}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Technologies *
-                  </label>
+                    <Send className="mr-2 size-4" />
+                    {isSubmitting && submitMode === "publish"
+                      ? "Publishing..."
+                      : "Publish Case Study"}
+                  </button>
 
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      void submitCaseStudy(false)
+                    }}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Save className="mr-2 size-4" />
+                    {isSubmitting && submitMode === "draft"
+                      ? "Saving Draft..."
+                      : "Save as Draft"}
+                  </button>
+                </div>
+              </FormCard>
+
+              <FormCard
+                title="Technologies"
+                description="List the platforms and tools used, one per line."
+              >
+                <FormField
+                  id="case-study-technologies"
+                  label="Technology Stack"
+                  required
+                  description="Each non-empty line becomes one technology item."
+                >
                   <textarea
                     id="case-study-technologies"
-                    rows={6}
+                    rows={7}
                     value={technologiesText}
                     onChange={(event) =>
                       setTechnologiesText(event.target.value)
                     }
-                    placeholder="Enter one technology per line"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 leading-7 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder={"AWS\nKubernetes\nTerraform\nGitHub Actions"}
+                    className={`${inputClassName} leading-7`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+
+                <ListPreview
+                  title="Technology preview"
+                  items={splitLines(technologiesText)}
+                  emptyMessage="Add technologies above to preview them here."
+                />
+              </FormCard>
+
+              <FormCard
+                title="Featured image"
+                description="Upload the visual displayed on the public case-study page."
+              >
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
+                      <ImageIcon className="size-4" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-950">
+                        Case-study image
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        PNG, JPG, JPEG, or WebP
+                      </p>
+                    </div>
+                  </div>
+
+                  <ImageUploader
+                    label="Featured Image"
+                    value={formData.image_url}
+                    onChange={(value) => updateField("image_url", value)}
+                    accept=".png,.jpg,.jpeg,.webp"
+                    helpText="Upload the case study featured image."
+                    disabled={isSubmitting}
                   />
                 </div>
+              </FormCard>
 
-                <ImageUploader
-                  label="Featured Image"
-                  value={formData.image_url}
-                  onChange={(value) => updateField("image_url", value)}
-                  accept=".png,.jpg,.jpeg,.webp"
-                  helpText="Upload the case study featured image."
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
+              <CompletionCard
+                completedFields={completedFields}
+                totalFields={requiredChecks.length}
+                percentage={completionPercentage}
+              />
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <h2 className="font-bold text-slate-900">Publishing</h2>
+              <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                    <Settings2 className="size-5" />
+                  </div>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Save Draft keeps the case study private. Publish makes it
-                immediately available on the public Case Studies page.
-              </p>
-            </div>
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Publishing behavior
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Saving a draft keeps this case study private. Publishing
+                      makes it immediately available on the public Case Studies
+                      page.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </section>
           </aside>
         </div>
-      </section>
+      </div>
     </>
   )
 }
+
+type SectionCardProps = {
+  icon: ReactNode
+  title: string
+  description: string
+  children: ReactNode
+}
+
+function SectionCard({ icon, title, description, children }: SectionCardProps) {
+  return (
+    <FormCard
+      title={title}
+      description={description}
+      action={
+        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          {icon}
+        </div>
+      }
+    >
+      <div className="space-y-6">{children}</div>
+    </FormCard>
+  )
+}
+
+type RichEditorFieldProps = {
+  label: string
+  value: string
+  placeholder: string
+  disabled: boolean
+  onChange: (value: string) => void
+}
+
+function RichEditorField({
+  label,
+  value,
+  placeholder,
+  disabled,
+  onChange,
+}: RichEditorFieldProps) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-bold text-slate-700">
+        {label}
+        <span className="text-red-600"> *</span>
+      </label>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100">
+        <RichTextEditor
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+      </div>
+
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        Enter at least 20 visible characters. Use headings, lists, and
+        formatting where helpful.
+      </p>
+    </div>
+  )
+}
+
+type ListPreviewProps = {
+  title: string
+  items: string[]
+  emptyMessage: string
+}
+
+function ListPreview({ title, items, emptyMessage }: ListPreviewProps) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+      <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.14em] text-slate-500 uppercase">
+        <Wrench className="size-3.5" />
+        {title}
+      </div>
+
+      {items.length > 0 ? (
+        <ul className="mt-4 space-y-2">
+          {items.map((item, index) => (
+            <li
+              key={`${item}-${index}`}
+              className="flex items-start gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200"
+            >
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm leading-6 text-slate-500">{emptyMessage}</p>
+      )}
+    </div>
+  )
+}
+
+type CompletionCardProps = {
+  completedFields: number
+  totalFields: number
+  percentage: number
+}
+
+function CompletionCard({
+  completedFields,
+  totalFields,
+  percentage,
+}: CompletionCardProps) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-extrabold text-slate-950">
+            Case-study completion
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {completedFields} of {totalFields} required fields completed
+          </p>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="size-5" />
+        </div>
+      </div>
+
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <FileText className="size-4" />
+          Ready for review
+        </div>
+
+        <p className="text-sm font-extrabold text-slate-700">{percentage}%</p>
+      </div>
+    </section>
+  )
+}
+
+type SearchPreviewProps = {
+  title: string
+  slug: string
+  description: string
+}
+
+function SearchPreview({ title, slug, description }: SearchPreviewProps) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-slate-500 uppercase">
+        <Sparkles className="size-3.5" />
+        Search preview
+      </div>
+
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <p className="truncate text-xs text-emerald-700">
+          cubiclesservices.com › case-studies › {slug || "case-study-slug"}
+        </p>
+
+        <p className="mt-1 line-clamp-2 text-lg font-medium text-blue-700">
+          {title || "Case Study | Cubicles Services"}
+        </p>
+
+        <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">
+          {description ||
+            "Add an SEO description to preview how this case study may appear in search results."}
+        </p>
+      </div>
+    </section>
+  )
+}
+
+const inputClassName =
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

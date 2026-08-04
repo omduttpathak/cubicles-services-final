@@ -28,6 +28,13 @@ export type Service = {
   seoDescription: string
 }
 
+type ServicesApiEnvelope = {
+  items?: ServiceApiResponse[]
+  data?: ServiceApiResponse[]
+  services?: ServiceApiResponse[]
+  results?: ServiceApiResponse[]
+}
+
 function mapService(service: ServiceApiResponse): Service {
   return {
     id: service.id,
@@ -36,7 +43,9 @@ function mapService(service: ServiceApiResponse): Service {
     icon: service.icon,
     shortDescription: service.short_description,
     description: service.description,
-    highlights: service.highlights,
+    highlights: Array.isArray(service.highlights)
+      ? service.highlights
+      : [],
     heroTitle: service.hero_title,
     heroDescription: service.hero_description,
     seoTitle: service.seo_title,
@@ -44,14 +53,52 @@ function mapService(service: ServiceApiResponse): Service {
   }
 }
 
-export async function getServices(): Promise<Service[]> {
-  const response = await api.get<ServiceApiResponse[]>("/services")
+function extractServices(payload: unknown): ServiceApiResponse[] {
+  if (Array.isArray(payload)) {
+    return payload as ServiceApiResponse[]
+  }
 
-  return response.data.map(mapService)
+  if (!payload || typeof payload !== "object") {
+    return []
+  }
+
+  const response = payload as ServicesApiEnvelope
+
+  if (Array.isArray(response.items)) {
+    return response.items
+  }
+
+  if (Array.isArray(response.data)) {
+    return response.data
+  }
+
+  if (Array.isArray(response.services)) {
+    return response.services
+  }
+
+  if (Array.isArray(response.results)) {
+    return response.results
+  }
+
+  return []
 }
 
-export async function getServiceBySlug(slug: string): Promise<Service> {
-  const response = await api.get<ServiceApiResponse>(`/services/${slug}`)
+export async function getServices(): Promise<Service[]> {
+  const response = await api.get<
+    ServiceApiResponse[] | ServicesApiEnvelope
+  >("/services")
+
+  const services = extractServices(response.data)
+
+  return services.map(mapService)
+}
+
+export async function getServiceBySlug(
+  slug: string
+): Promise<Service> {
+  const response = await api.get<ServiceApiResponse>(
+    `/services/${slug}`
+  )
 
   return mapService(response.data)
 }

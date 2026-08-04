@@ -181,7 +181,8 @@ const buttonVariants = cva(
           "[&_svg:not([class*='size-'])]:size-3.5",
         ].join(" "),
 
-        "icon-lg": "size-12 rounded-xl [&_svg:not([class*='size-'])]:size-5",
+        "icon-lg":
+          "size-12 rounded-xl [&_svg:not([class*='size-'])]:size-5",
       },
     },
 
@@ -204,6 +205,7 @@ function Button({
   asChild = false,
   children,
   render,
+  nativeButton,
   ...props
 }: ButtonProps) {
   const classes = cn(
@@ -214,22 +216,36 @@ function Button({
     })
   )
 
+  /*
+   * When asChild is used, the rendered element may be a React Router Link
+   * or an anchor instead of a native button.
+   *
+   * Base UI must therefore receive nativeButton={false}.
+   */
   if (asChild && React.isValidElement(children)) {
     return (
       <ButtonPrimitive
         data-slot="button"
         className={classes}
         render={children}
+        nativeButton={false}
         {...props}
       />
     )
   }
 
+  /*
+   * When a custom render element is supplied, it may also not be a button.
+   * The caller can explicitly provide nativeButton.
+   *
+   * Otherwise, normal Button usage defaults to a real native button.
+   */
   return (
     <ButtonPrimitive
       data-slot="button"
       className={classes}
       render={render}
+      nativeButton={nativeButton ?? (render ? false : true)}
       {...props}
     >
       {children}

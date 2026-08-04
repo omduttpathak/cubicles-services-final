@@ -1,6 +1,19 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import axios from "axios"
-import { ArrowLeft, Save } from "lucide-react"
+import {
+  CheckCircle2,
+  Cpu,
+  Eye,
+  FileText,
+  Globe2,
+  ImageIcon,
+  Layers3,
+  Save,
+  Search,
+  Settings2,
+  Sparkles,
+  Star,
+} from "lucide-react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
@@ -9,11 +22,29 @@ import {
   updateAdminTechnology,
   type UpdateAdminTechnologyRequest,
 } from "@/api/adminTechnologiesApi"
+import AdminFormPageHeader from "@/components/admin/forms/AdminFormPageHeader"
+import CharacterCount from "@/components/admin/forms/CharacterCount"
+import FormCard from "@/components/admin/forms/FormCard"
+import FormField from "@/components/admin/forms/FormField"
 import ImageUploader from "@/components/admin/ImageUploader"
 import RichTextEditor from "@/components/admin/RichTextEditor"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
+
+const initialFormData: UpdateAdminTechnologyRequest = {
+  name: "",
+  slug: "",
+  category: "",
+  icon: "",
+  logo_url: null,
+  description: "",
+  display_order: 0,
+  is_featured: false,
+  is_active: true,
+  seo_title: "",
+  seo_description: "",
+}
 
 function createSlug(value: string): string {
   return value
@@ -37,18 +68,31 @@ function getPlainText(value: string): string {
     .trim()
 }
 
-const initialFormData: UpdateAdminTechnologyRequest = {
-  name: "",
-  slug: "",
-  category: "",
-  icon: "",
-  logo_url: null,
-  description: "",
-  display_order: 0,
-  is_featured: false,
-  is_active: true,
-  seo_title: "",
-  seo_description: "",
+function getValidationMessage(detail: unknown): string {
+  if (typeof detail === "string") {
+    return detail
+  }
+
+  if (!Array.isArray(detail) || detail.length === 0) {
+    return "Unable to update the technology."
+  }
+
+  return detail
+    .map((validationError) => {
+      const field = Array.isArray(validationError?.loc)
+        ? validationError.loc
+            .filter((item: unknown) => item !== "body")
+            .join(".")
+        : "field"
+
+      const message =
+        typeof validationError?.msg === "string"
+          ? validationError.msg
+          : "Please check this value."
+
+      return `${field}: ${message}`
+    })
+    .join(" | ")
 }
 
 export default function AdminTechnologyEdit() {
@@ -65,6 +109,7 @@ export default function AdminTechnologyEdit() {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   function updateField<Key extends keyof UpdateAdminTechnologyRequest>(
     field: Key,
@@ -111,6 +156,12 @@ export default function AdminTechnologyEdit() {
   }
 
   async function handleSubmit() {
+    if (isSubmitting) {
+      return
+    }
+
+    setFormError(null)
+
     const name = formData.name.trim()
     const slug = createSlug(formData.slug)
     const category = formData.category.trim()
@@ -120,38 +171,34 @@ export default function AdminTechnologyEdit() {
     const seoTitle = formData.seo_title.trim()
     const seoDescription = formData.seo_description.trim()
 
+    let validationMessage: string | null = null
+
     if (name.length < 2) {
-      toast.error("Technology name must contain at least 2 characters.")
-      return
+      validationMessage = "Technology name must contain at least 2 characters."
+    } else if (slug.length < 2) {
+      validationMessage = "Slug must contain at least 2 characters."
+    } else if (category.length < 2) {
+      validationMessage = "Category must contain at least 2 characters."
+    } else if (icon.length < 1) {
+      validationMessage = "Please enter an icon name."
+    } else if (descriptionText.length < 10) {
+      validationMessage =
+        "Description must contain at least 10 visible characters."
+    } else if (seoTitle.length < 3) {
+      validationMessage = "SEO title must contain at least 3 characters."
+    } else if (seoDescription.length < 10) {
+      validationMessage = "SEO description must contain at least 10 characters."
     }
 
-    if (slug.length < 2) {
-      toast.error("Slug must contain at least 2 characters.")
-      return
-    }
+    if (validationMessage) {
+      setFormError(validationMessage)
+      toast.error(validationMessage)
 
-    if (category.length < 2) {
-      toast.error("Category must contain at least 2 characters.")
-      return
-    }
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
 
-    if (icon.length < 1) {
-      toast.error("Please enter an icon name.")
-      return
-    }
-
-    if (descriptionText.length < 10) {
-      toast.error("Description must contain at least 10 visible characters.")
-      return
-    }
-
-    if (seoTitle.length < 3) {
-      toast.error("SEO title must contain at least 3 characters.")
-      return
-    }
-
-    if (seoDescription.length < 10) {
-      toast.error("SEO description must contain at least 10 characters.")
       return
     }
 
@@ -173,36 +220,23 @@ export default function AdminTechnologyEdit() {
       })
 
       toast.success("Technology updated successfully.")
-
       navigate("/admin/technologies")
     } catch (error) {
       console.error(error)
 
+      let message = "Unable to update the technology."
+
       if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail
-
-        if (typeof detail === "string") {
-          toast.error(detail)
-        } else if (Array.isArray(detail) && detail.length > 0) {
-          const messages = detail.map((validationError) => {
-            const field = Array.isArray(validationError?.loc)
-              ? validationError.loc
-                  .filter((item: unknown) => item !== "body")
-                  .join(".")
-              : "field"
-
-            return `${field}: ${
-              validationError?.msg || "Please check this value."
-            }`
-          })
-
-          toast.error(messages.join(" | "))
-        } else {
-          toast.error("Unable to update the technology.")
-        }
-      } else {
-        toast.error("Unable to update the technology.")
+        message = getValidationMessage(error.response?.data?.detail)
       }
+
+      setFormError(message)
+      toast.error(message)
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -211,6 +245,24 @@ export default function AdminTechnologyEdit() {
   useEffect(() => {
     void loadTechnology()
   }, [technologyId])
+
+  const requiredChecks = useMemo(
+    () => [
+      formData.name.trim().length >= 2,
+      createSlug(formData.slug).length >= 2,
+      formData.category.trim().length >= 2,
+      formData.icon.trim().length >= 1,
+      getPlainText(formData.description).length >= 10,
+      formData.seo_title.trim().length >= 3,
+      formData.seo_description.trim().length >= 10,
+    ],
+    [formData]
+  )
+
+  const completedFields = requiredChecks.filter(Boolean).length
+  const completionPercentage = Math.round(
+    (completedFields / requiredChecks.length) * 100
+  )
 
   if (isLoading) {
     return <PageLoader message="Loading technology..." />
@@ -235,67 +287,62 @@ export default function AdminTechnologyEdit() {
         description="Edit an existing Cubicles Services technology."
       />
 
-      <section>
-        <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <button
-              type="button"
-              onClick={() => navigate("/admin/technologies")}
-              className="inline-flex items-center text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Technologies
-            </button>
+      <div className="space-y-6">
+        <AdminFormPageHeader
+          eyebrow="Technology management"
+          title="Edit Technology"
+          description="Update technology content, presentation, visibility, and search metadata."
+          backLabel="Back to Technologies"
+          onBack={() => navigate("/admin/technologies")}
+          submitLabel="Save Changes"
+          submittingLabel="Saving..."
+          isSubmitting={isSubmitting}
+          onSubmit={() => {
+            void handleSubmit()
+          }}
+        />
 
-            <h1 className="mt-3 text-2xl font-bold text-slate-900">
-              Edit Technology
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Update technology content, display settings and SEO information.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        {formError && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700 shadow-sm"
           >
-            <Save className="mr-2 h-4 w-4" />
+            {formError}
+          </div>
+        )}
 
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Technology Information
-              </h2>
-
-              <div className="mt-6 space-y-5">
-                <FormField
+            <SectionCard
+              icon={<Cpu className="size-5" />}
+              title="Technology information"
+              description="Update the technology name, public URL, category, and public description."
+            >
+              <FormField id="technology-name" label="Technology Name" required>
+                <input
                   id="technology-name"
-                  label="Technology Name"
-                  required
-                >
-                  <input
-                    id="technology-name"
-                    type="text"
-                    maxLength={150}
-                    value={formData.name}
-                    onChange={(event) =>
-                      updateField("name", event.target.value)
-                    }
-                    className={inputClassName}
-                  />
-                </FormField>
+                  type="text"
+                  maxLength={150}
+                  value={formData.name}
+                  onChange={(event) => updateField("name", event.target.value)}
+                  className={inputClassName}
+                  disabled={isSubmitting}
+                />
 
-                <FormField id="technology-slug" label="Slug" required>
+                <CharacterCount current={formData.name.length} maximum={150} />
+              </FormField>
+
+              <FormField
+                id="technology-slug"
+                label="Slug"
+                required
+                description={`Public URL: /technologies/${
+                  formData.slug || "technology-slug"
+                }`}
+              >
+                <div className="relative">
+                  <Globe2 className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
+
                   <input
                     id="technology-slug"
                     type="text"
@@ -304,228 +351,487 @@ export default function AdminTechnologyEdit() {
                     onChange={(event) =>
                       updateField("slug", createSlug(event.target.value))
                     }
-                    className={`${inputClassName} font-mono text-sm`}
-                  />
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Public URL: /technologies/
-                    {formData.slug}
-                  </p>
-                </FormField>
-
-                <FormField id="technology-category" label="Category" required>
-                  <input
-                    id="technology-category"
-                    type="text"
-                    maxLength={100}
-                    value={formData.category}
-                    onChange={(event) =>
-                      updateField("category", event.target.value)
-                    }
-                    className={inputClassName}
-                  />
-                </FormField>
-
-                <div>
-                  <label className="mb-2 block font-medium text-slate-700">
-                    Description
-                    <span className="text-red-600"> *</span>
-                  </label>
-
-                  <RichTextEditor
-                    value={formData.description}
-                    onChange={(value) => updateField("description", value)}
-                    placeholder="Describe the technology capability and how it is used."
+                    className={`${inputClassName} pl-12 font-mono text-sm`}
                     disabled={isSubmitting}
                   />
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Enter at least 10 visible characters.
-                  </p>
                 </div>
-              </div>
-            </div>
 
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Search Engine Optimization
-              </h2>
+                <CharacterCount current={formData.slug.length} maximum={150} />
+              </FormField>
 
-              <div className="mt-6 space-y-5">
-                <FormField id="technology-seo-title" label="SEO Title" required>
-                  <input
-                    id="technology-seo-title"
-                    type="text"
-                    maxLength={255}
-                    value={formData.seo_title}
-                    onChange={(event) =>
-                      updateField("seo_title", event.target.value)
-                    }
-                    className={inputClassName}
-                  />
+              <FormField id="technology-category" label="Category" required>
+                <input
+                  id="technology-category"
+                  type="text"
+                  maxLength={100}
+                  value={formData.category}
+                  onChange={(event) =>
+                    updateField("category", event.target.value)
+                  }
+                  className={inputClassName}
+                  disabled={isSubmitting}
+                />
 
-                  <CharacterCount
-                    current={formData.seo_title.length}
-                    maximum={255}
-                  />
-                </FormField>
+                <CharacterCount
+                  current={formData.category.length}
+                  maximum={100}
+                />
+              </FormField>
 
-                <FormField
+              <RichEditorField
+                value={formData.description}
+                disabled={isSubmitting}
+                onChange={(value) => updateField("description", value)}
+              />
+            </SectionCard>
+
+            <SectionCard
+              icon={<Search className="size-5" />}
+              title="Search engine optimization"
+              description="Update how this technology appears in search results and shared links."
+            >
+              <FormField id="technology-seo-title" label="SEO Title" required>
+                <input
+                  id="technology-seo-title"
+                  type="text"
+                  maxLength={255}
+                  value={formData.seo_title}
+                  onChange={(event) =>
+                    updateField("seo_title", event.target.value)
+                  }
+                  className={inputClassName}
+                  disabled={isSubmitting}
+                />
+
+                <CharacterCount
+                  current={formData.seo_title.length}
+                  maximum={255}
+                />
+              </FormField>
+
+              <FormField
+                id="technology-seo-description"
+                label="SEO Description"
+                required
+              >
+                <textarea
                   id="technology-seo-description"
-                  label="SEO Description"
-                  required
-                >
-                  <textarea
-                    id="technology-seo-description"
-                    rows={5}
-                    maxLength={500}
-                    value={formData.seo_description}
-                    onChange={(event) =>
-                      updateField("seo_description", event.target.value)
-                    }
-                    className={inputClassName}
-                  />
+                  rows={5}
+                  maxLength={500}
+                  value={formData.seo_description}
+                  onChange={(event) =>
+                    updateField("seo_description", event.target.value)
+                  }
+                  className={`${inputClassName} leading-7`}
+                  disabled={isSubmitting}
+                />
 
-                  <CharacterCount
-                    current={formData.seo_description.length}
-                    maximum={500}
-                  />
-                </FormField>
-              </div>
-            </div>
+                <CharacterCount
+                  current={formData.seo_description.length}
+                  maximum={500}
+                />
+              </FormField>
+
+              <SearchPreview
+                title={formData.seo_title}
+                slug={formData.slug}
+                description={formData.seo_description}
+              />
+            </SectionCard>
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Display Settings
-              </h2>
-
-              <div className="mt-6 space-y-5">
-                <FormField id="technology-icon" label="Icon Name" required>
-                  <input
-                    id="technology-icon"
-                    type="text"
-                    maxLength={100}
-                    value={formData.icon}
-                    onChange={(event) =>
-                      updateField("icon", event.target.value)
-                    }
-                    className={`${inputClassName} font-mono`}
-                  />
-                </FormField>
-
-                <ImageUploader
-                  label="Technology Logo"
-                  value={formData.logo_url}
-                  onChange={(value) => updateField("logo_url", value)}
-                  accept=".png,.jpg,.jpeg,.webp,.svg"
-                  helpText="Upload PNG, JPG, WebP or SVG up to 5 MB."
+            <section className="sticky top-24 space-y-6">
+              <FormCard
+                title="Save changes"
+                description="Apply the current technology content and configuration."
+              >
+                <button
+                  type="button"
                   disabled={isSubmitting}
-                  compactPreview
-                />
+                  onClick={() => {
+                    void handleSubmit()
+                  }}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Save className="mr-2 size-4" />
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </FormCard>
 
-                <FormField id="technology-order" label="Display Order">
-                  <input
+              <FormCard
+                title="Display settings"
+                description="Configure the icon, ordering, visibility, and featured state."
+              >
+                <div className="space-y-5">
+                  <FormField
+                    id="technology-icon"
+                    label="Icon Name"
+                    required
+                    description="Enter the icon identifier used by the public interface."
+                  >
+                    <div className="relative">
+                      <Sparkles className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
+
+                      <input
+                        id="technology-icon"
+                        type="text"
+                        maxLength={100}
+                        value={formData.icon}
+                        onChange={(event) =>
+                          updateField("icon", event.target.value)
+                        }
+                        className={`${inputClassName} pl-12 font-mono`}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </FormField>
+
+                  <FormField
                     id="technology-order"
-                    type="number"
-                    min={0}
-                    value={formData.display_order}
-                    onChange={(event) =>
-                      updateField(
-                        "display_order",
-                        Math.max(0, Number(event.target.value))
-                      )
-                    }
-                    className={inputClassName}
+                    label="Display Order"
+                    description="Lower numbers appear earlier in technology listings."
+                  >
+                    <input
+                      id="technology-order"
+                      type="number"
+                      min={0}
+                      value={formData.display_order}
+                      onChange={(event) =>
+                        updateField(
+                          "display_order",
+                          Math.max(0, Number(event.target.value))
+                        )
+                      }
+                      className={inputClassName}
+                      disabled={isSubmitting}
+                    />
+                  </FormField>
+
+                  <ToggleField
+                    icon={<Star className="size-4" />}
+                    title="Featured Technology"
+                    description="Highlight this technology in featured website sections."
+                    checked={formData.is_featured}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("is_featured", checked)}
                   />
-                </FormField>
 
-                <ToggleField
-                  title="Featured Technology"
-                  description="Highlight this technology in featured website sections."
-                  checked={formData.is_featured}
-                  onChange={(checked) => updateField("is_featured", checked)}
-                />
+                  <ToggleField
+                    icon={<Eye className="size-4" />}
+                    title="Active"
+                    description="Active technologies are visible on the public website."
+                    checked={formData.is_active}
+                    disabled={isSubmitting}
+                    onChange={(checked) => updateField("is_active", checked)}
+                  />
+                </div>
+              </FormCard>
 
-                <ToggleField
-                  title="Active"
-                  description="Active technologies are visible on the public website."
-                  checked={formData.is_active}
-                  onChange={(checked) => updateField("is_active", checked)}
-                />
-              </div>
-            </div>
+              <FormCard
+                title="Technology logo"
+                description="Update the logo shown on technology cards and detail pages."
+              >
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
+                      <ImageIcon className="size-4" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-950">
+                        Brand image
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        PNG, JPG, WebP, or SVG
+                      </p>
+                    </div>
+                  </div>
+
+                  <ImageUploader
+                    label="Technology Logo"
+                    value={formData.logo_url}
+                    onChange={(value) => updateField("logo_url", value)}
+                    accept=".png,.jpg,.jpeg,.webp,.svg"
+                    helpText="Upload PNG, JPG, WebP or SVG up to 5 MB."
+                    disabled={isSubmitting}
+                    compactPreview
+                  />
+                </div>
+              </FormCard>
+
+              <CompletionCard
+                completedFields={completedFields}
+                totalFields={requiredChecks.length}
+                percentage={completionPercentage}
+                isActive={formData.is_active}
+                isFeatured={formData.is_featured}
+              />
+
+              <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-violet-50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                    <Settings2 className="size-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="font-extrabold text-slate-950">
+                      Display guidance
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Keep categories consistent, use clear icon names, and
+                      review display order before saving so technology listings
+                      remain organized.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </section>
           </aside>
         </div>
-      </section>
+      </div>
     </>
   )
 }
 
-type FormFieldProps = {
-  id: string
-  label: string
-  required?: boolean
+type SectionCardProps = {
+  icon: ReactNode
+  title: string
+  description: string
   children: ReactNode
 }
 
-function FormField({ id, label, required = false, children }: FormFieldProps) {
+function SectionCard({ icon, title, description, children }: SectionCardProps) {
+  return (
+    <FormCard
+      title={title}
+      description={description}
+      action={
+        <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          {icon}
+        </div>
+      }
+    >
+      <div className="space-y-6">{children}</div>
+    </FormCard>
+  )
+}
+
+function RichEditorField({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-slate-700">
-        {label}
-
-        {required && <span className="text-red-600"> *</span>}
+      <label className="mb-2 block text-sm font-bold text-slate-700">
+        Description
+        <span className="text-red-600"> *</span>
       </label>
 
-      {children}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100">
+        <RichTextEditor
+          value={value}
+          onChange={onChange}
+          placeholder="Describe the technology capability and how it is used."
+          disabled={disabled}
+        />
+      </div>
+
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        Enter at least 10 visible characters. Use headings, lists, and
+        formatting where helpful.
+      </p>
     </div>
   )
 }
 
-function CharacterCount({
-  current,
-  maximum,
-}: {
-  current: number
-  maximum: number
-}) {
-  return (
-    <p className="mt-1 text-right text-xs text-slate-500">
-      {current}/{maximum}
-    </p>
-  )
-}
-
 function ToggleField({
+  icon,
   title,
   description,
   checked,
+  disabled,
   onChange,
 }: {
+  icon: ReactNode
   title: string
   description: string
   checked: boolean
+  disabled: boolean
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+    <label
+      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+        checked
+          ? "border-blue-200 bg-blue-50/70"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4"
+        className="peer sr-only"
       />
 
-      <span>
-        <span className="block font-semibold text-slate-900">{title}</span>
+      <span
+        aria-hidden="true"
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-blue-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
 
-        <span className="mt-1 block text-sm text-slate-500">{description}</span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-2 text-sm font-extrabold text-slate-950">
+          {icon}
+          {title}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          {description}
+        </span>
       </span>
     </label>
   )
 }
 
+function CompletionCard({
+  completedFields,
+  totalFields,
+  percentage,
+  isActive,
+  isFeatured,
+}: {
+  completedFields: number
+  totalFields: number
+  percentage: number
+  isActive: boolean
+  isFeatured: boolean
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-extrabold text-slate-950">
+            Technology completion
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {completedFields} of {totalFields} required fields completed
+          </p>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <CheckCircle2 className="size-5" />
+        </div>
+      </div>
+
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <StatusMetric
+          icon={<FileText className="size-4" />}
+          label="Completion"
+          value={`${percentage}%`}
+        />
+
+        <StatusMetric
+          icon={<Layers3 className="size-4" />}
+          label="Visibility"
+          value={isActive ? "Active" : "Inactive"}
+        />
+      </div>
+
+      <div
+        className={`mt-3 rounded-xl border px-4 py-3 text-sm font-bold ${
+          isFeatured
+            ? "border-violet-200 bg-violet-50 text-violet-700"
+            : "border-slate-200 bg-slate-50 text-slate-700"
+        }`}
+      >
+        {isFeatured ? "Featured technology" : "Standard technology"}
+      </div>
+    </section>
+  )
+}
+
+function StatusMetric({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center gap-2 text-slate-500">
+        {icon}
+
+        <span className="text-[11px] font-bold tracking-[0.12em] uppercase">
+          {label}
+        </span>
+      </div>
+
+      <p className="mt-2 text-sm font-black text-slate-950">{value}</p>
+    </div>
+  )
+}
+
+function SearchPreview({
+  title,
+  slug,
+  description,
+}: {
+  title: string
+  slug: string
+  description: string
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-slate-500 uppercase">
+        <Sparkles className="size-3.5" />
+        Search preview
+      </div>
+
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <p className="truncate text-xs text-emerald-700">
+          cubiclesservices.com › technologies › {slug || "technology-slug"}
+        </p>
+
+        <p className="mt-1 line-clamp-2 text-lg font-medium text-blue-700">
+          {title || "Technology | Cubicles Services"}
+        </p>
+
+        <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">
+          {description ||
+            "Add an SEO description to preview how this technology may appear in search results."}
+        </p>
+      </div>
+    </section>
+  )
+}
+
 const inputClassName =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"

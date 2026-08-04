@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import {
+  ArrowLeft,
+  ArrowRight,
   Briefcase,
   ExternalLink,
   Eye,
   FileText,
+  Filter,
+  Mail,
   Search,
+  Sparkles,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -24,12 +30,14 @@ import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
 import { getApiAssetUrl } from "@/utils/apiAssetUrl"
 
+const applicationsPerPage = 5
+
 const statusClasses: Record<CareerApplicationStatus, string> = {
-  new: "bg-blue-100 text-blue-700",
-  reviewing: "bg-amber-100 text-amber-700",
-  shortlisted: "bg-purple-100 text-purple-700",
-  rejected: "bg-red-100 text-red-700",
-  hired: "bg-green-100 text-green-700",
+  new: "bg-blue-50 text-blue-700 ring-blue-200",
+  reviewing: "bg-amber-50 text-amber-700 ring-amber-200",
+  shortlisted: "bg-violet-50 text-violet-700 ring-violet-200",
+  rejected: "bg-red-50 text-red-700 ring-red-200",
+  hired: "bg-emerald-50 text-emerald-700 ring-emerald-200",
 }
 
 export default function AdminCareerApplications() {
@@ -41,19 +49,14 @@ export default function AdminCareerApplications() {
 
   const [selectedApplication, setSelectedApplication] =
     useState<AdminCareerApplication | null>(null)
-
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   const [loadingDetailsId, setLoadingDetailsId] = useState<number | null>(null)
-
   const [updatingId, setUpdatingId] = useState<number | null>(null)
-
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
-
-  const applicationsPerPage = 5
 
   async function loadApplications() {
     try {
@@ -61,7 +64,6 @@ export default function AdminCareerApplications() {
       setHasError(false)
 
       const response = await getAdminCareerApplications()
-
       setApplications(response)
     } catch (error) {
       console.error(error)
@@ -102,7 +104,6 @@ export default function AdminCareerApplications() {
       toast.success("Application status updated successfully.")
     } catch (error) {
       console.error(error)
-
       toast.error("Unable to update application status.")
     } finally {
       setUpdatingId(null)
@@ -119,7 +120,6 @@ export default function AdminCareerApplications() {
       setIsDetailsOpen(true)
     } catch (error) {
       console.error(error)
-
       toast.error("Unable to load candidate details.")
     } finally {
       setLoadingDetailsId(null)
@@ -154,7 +154,6 @@ export default function AdminCareerApplications() {
       toast.success("Career application deleted successfully.")
     } catch (error) {
       console.error(error)
-
       toast.error("Unable to delete the career application.")
     } finally {
       setDeletingId(null)
@@ -164,6 +163,11 @@ export default function AdminCareerApplications() {
   function closeDetailsModal() {
     setIsDetailsOpen(false)
     setSelectedApplication(null)
+  }
+
+  function clearFilters() {
+    setSearchTerm("")
+    setSelectedStatus("all")
   }
 
   useEffect(() => {
@@ -199,7 +203,6 @@ export default function AdminCareerApplications() {
   )
 
   const safeCurrentPage = Math.min(currentPage, totalPages)
-
   const startIndex = (safeCurrentPage - 1) * applicationsPerPage
 
   const paginatedApplications = filteredApplications.slice(
@@ -212,6 +215,19 @@ export default function AdminCareerApplications() {
       setCurrentPage(totalPages)
     }
   }, [currentPage, totalPages])
+
+  const totalApplications = applications.length
+  const newCount = applications.filter(
+    (application) => application.status === "new"
+  ).length
+  const shortlistedCount = applications.filter(
+    (application) => application.status === "shortlisted"
+  ).length
+  const hiredCount = applications.filter(
+    (application) => application.status === "hired"
+  ).length
+
+  const hasFilters = Boolean(searchTerm) || selectedStatus !== "all"
 
   if (isLoading) {
     return <PageLoader message="Loading career applications..." />
@@ -236,139 +252,163 @@ export default function AdminCareerApplications() {
         description="Review career applications submitted to Cubicles Services."
       />
 
-      <section>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="font-semibold tracking-wider text-blue-600 uppercase">
-            Recruitment
-          </p>
+      <section className="space-y-6">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.25),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.18),transparent_40%)]" />
 
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            Career Applications
-          </h1>
+          <div className="relative max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-[0.16em] text-blue-200 uppercase backdrop-blur">
+              <Sparkles className="size-3.5" />
+              Recruitment
+            </div>
 
-          <p className="mt-1 text-sm text-slate-600">
-            Review candidates who have applied through the website.
-          </p>
+            <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
+              Career Applications
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+              Review, organize, and update candidates who have applied through
+              the public website.
+            </p>
+          </div>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Applications" value={applications.length} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Total Applications"
+            value={totalApplications}
+            description="All submitted candidates"
+            icon={<Briefcase className="size-5" />}
+          />
 
           <StatCard
             label="New"
-            value={
-              applications.filter((application) => application.status === "new")
-                .length
-            }
+            value={newCount}
+            description="Awaiting initial review"
+            icon={<UserRound className="size-5" />}
+            tone="info"
           />
 
           <StatCard
             label="Shortlisted"
-            value={
-              applications.filter(
-                (application) => application.status === "shortlisted"
-              ).length
-            }
+            value={shortlistedCount}
+            description="Moved forward for evaluation"
+            icon={<Eye className="size-5" />}
+            tone="featured"
           />
 
           <StatCard
             label="Hired"
-            value={
-              applications.filter(
-                (application) => application.status === "hired"
-              ).length
-            }
+            value={hiredCount}
+            description="Successfully selected candidates"
+            icon={<FileText className="size-5" />}
+            tone="success"
           />
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-400" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-slate-100 p-2.5 text-slate-600">
+                <Filter className="size-4" />
+              </div>
 
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by candidate, email or position..."
-              className="w-full rounded-xl border border-slate-300 bg-white py-3 pr-4 pl-12 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
+              <div>
+                <h2 className="text-sm font-bold text-slate-950">
+                  Filter applications
+                </h2>
+
+                <p className="text-xs leading-5 text-slate-500">
+                  Search by candidate details or narrow results by status.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-500">
+              {filteredApplications.length} result
+              {filteredApplications.length === 1 ? "" : "s"}
+            </p>
           </div>
 
-          <select
-            value={selectedStatus}
-            onChange={(event) => setSelectedStatus(event.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:max-w-xs"
-          >
-            <option value="all">All Statuses</option>
-            <option value="new">New</option>
-            <option value="reviewing">Reviewing</option>
-            <option value="shortlisted">Shortlisted</option>
-            <option value="rejected">Rejected</option>
-            <option value="hired">Hired</option>
-          </select>
+          <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
 
-          {(searchTerm || selectedStatus !== "all") && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchTerm("")
-                setSelectedStatus("all")
-              }}
-              className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search by candidate, email or position..."
+                className={inputClassName}
+              />
+            </div>
+
+            <select
+              value={selectedStatus}
+              onChange={(event) => setSelectedStatus(event.target.value)}
+              className={selectClassName}
             >
-              Clear Filters
-            </button>
-          )}
+              <option value="all">All Statuses</option>
+              <option value="new">New</option>
+              <option value="reviewing">Reviewing</option>
+              <option value="shortlisted">Shortlisted</option>
+              <option value="rejected">Rejected</option>
+              <option value="hired">Hired</option>
+            </select>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <X className="size-4" />
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
 
         {filteredApplications.length === 0 ? (
-          <div className="mt-6 rounded-xl bg-white px-6 py-16 text-center shadow-sm">
-            <UserRound className="mx-auto h-12 w-12 text-slate-400" />
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <UserRound className="size-7" />
+            </div>
 
-            <h2 className="mt-5 text-2xl font-bold text-slate-900">
+            <h2 className="mt-5 text-xl font-bold text-slate-950">
               No Applications Found
             </h2>
 
-            <p className="mt-3 text-slate-600">
-              {searchTerm || selectedStatus !== "all"
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+              {hasFilters
                 ? "No candidates match the selected filters."
                 : "Submitted career applications will appear here."}
             </p>
+
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           <>
-            <div className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm">
+            <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:block">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-slate-50/80">
                     <tr>
-                      <th className="px-5 py-4 text-left text-sm font-semibold text-slate-700">
-                        Candidate
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold text-slate-700">
-                        Position
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold text-slate-700">
-                        Experience
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold text-slate-700">
-                        Location
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold text-slate-700">
-                        Applied
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold text-slate-700">
-                        Status
-                      </th>
-
-                      <th className="px-5 py-4 text-right text-sm font-semibold text-slate-700">
-                        Actions
-                      </th>
+                      <TableHeading>Candidate</TableHeading>
+                      <TableHeading>Position</TableHeading>
+                      <TableHeading>Experience</TableHeading>
+                      <TableHeading>Location</TableHeading>
+                      <TableHeading>Applied</TableHeading>
+                      <TableHeading>Status</TableHeading>
+                      <TableHeading align="right">Actions</TableHeading>
                     </tr>
                   </thead>
 
@@ -376,81 +416,64 @@ export default function AdminCareerApplications() {
                     {paginatedApplications.map((application) => (
                       <tr
                         key={application.id}
-                        className="align-top transition hover:bg-slate-50"
+                        className="align-top transition hover:bg-slate-50/80"
                       >
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-slate-900">
-                            {application.full_name}
-                          </p>
+                        <td className="px-6 py-5">
+                          <div className="flex items-start gap-4">
+                            <CandidateAvatar name={application.full_name} />
 
-                          <a
-                            href={`mailto:${application.email}`}
-                            className="mt-1 block text-sm font-medium text-blue-600 hover:underline"
-                          >
-                            {application.email}
-                          </a>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-950">
+                                {application.full_name}
+                              </p>
 
-                          <p className="mt-1 text-sm text-slate-500">
-                            {application.phone || "No phone provided"}
-                          </p>
+                              <a
+                                href={`mailto:${application.email}`}
+                                className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
+                              >
+                                <Mail className="size-3.5" />
+                                {application.email}
+                              </a>
 
-                          <p className="mt-1 text-sm text-slate-500">
-                            {application.current_company ||
-                              "No current company"}
-                          </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {application.phone || "No phone provided"}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-500">
+                                {application.current_company ||
+                                  "No current company"}
+                              </p>
+                            </div>
+                          </div>
                         </td>
 
-                        <td className="px-5 py-4 text-sm font-medium text-slate-700">
+                        <td className="px-6 py-5 text-sm font-semibold text-slate-800">
                           {application.position}
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-slate-600">
+                        <td className="px-6 py-5 text-sm text-slate-600">
                           {application.experience || "Not provided"}
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-slate-600">
+                        <td className="px-6 py-5 text-sm text-slate-600">
                           {application.location || "Not provided"}
                         </td>
 
-                        <td className="px-5 py-4 text-sm whitespace-nowrap text-slate-600">
-                          {new Date(application.created_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            }
-                          )}
+                        <td className="px-6 py-5 text-sm whitespace-nowrap text-slate-600">
+                          {formatDate(application.created_at)}
                         </td>
 
-                        <td className="px-5 py-4">
-                          <select
-                            value={application.status}
+                        <td className="px-6 py-5">
+                          <StatusSelect
+                            application={application}
                             disabled={updatingId === application.id}
-                            onChange={(event) => {
-                              void handleStatusChange(
-                                application,
-                                event.target.value as CareerApplicationStatus
-                              )
+                            onChange={(newStatus) => {
+                              void handleStatusChange(application, newStatus)
                             }}
-                            aria-label={`Change status for ${application.full_name}`}
-                            className={`rounded-lg border border-transparent px-3 py-2 text-sm font-semibold transition outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50 ${
-                              statusClasses[application.status]
-                            }`}
-                          >
-                            <option value="new">New</option>
-
-                            <option value="reviewing">Reviewing</option>
-
-                            <option value="shortlisted">Shortlisted</option>
-
-                            <option value="rejected">Rejected</option>
-
-                            <option value="hired">Hired</option>
-                          </select>
+                          />
                         </td>
 
-                        <td className="px-5 py-4 text-right">
+                        <td className="px-6 py-5 text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
@@ -460,9 +483,9 @@ export default function AdminCareerApplications() {
                               }}
                               title="View candidate details"
                               aria-label={`View details for ${application.full_name}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className={actionButtonClassName}
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="size-4" />
                             </button>
 
                             {application.linkedin_url && (
@@ -472,9 +495,9 @@ export default function AdminCareerApplications() {
                                 rel="noreferrer"
                                 title="Open LinkedIn profile"
                                 aria-label={`Open ${application.full_name} LinkedIn profile`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 text-blue-600 transition hover:bg-blue-50"
+                                className="inline-flex size-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition hover:bg-blue-100"
                               >
-                                <ExternalLink className="h-4 w-4" />
+                                <ExternalLink className="size-4" />
                               </a>
                             )}
 
@@ -488,9 +511,9 @@ export default function AdminCareerApplications() {
                                 rel="noreferrer"
                                 title="Open résumé"
                                 aria-label={`Open ${application.full_name} résumé`}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-green-200 text-green-600 transition hover:bg-green-50"
+                                className="inline-flex size-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100"
                               >
-                                <FileText className="h-4 w-4" />
+                                <FileText className="size-4" />
                               </a>
                             )}
 
@@ -502,9 +525,9 @@ export default function AdminCareerApplications() {
                               }}
                               title="Delete application"
                               aria-label={`Delete application from ${application.full_name}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex size-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="size-4" />
                             </button>
                           </div>
                         </td>
@@ -515,37 +538,154 @@ export default function AdminCareerApplications() {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-col gap-4 rounded-xl bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="grid gap-4 xl:hidden">
+              {paginatedApplications.map((application) => (
+                <article
+                  key={application.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <CandidateAvatar name={application.full_name} />
+
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-semibold text-slate-950">
+                        {application.full_name}
+                      </h2>
+
+                      <a
+                        href={`mailto:${application.email}`}
+                        className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium break-all text-blue-600 hover:underline"
+                      >
+                        <Mail className="size-3.5 shrink-0" />
+                        {application.email}
+                      </a>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        {application.current_company || "No current company"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3 border-y border-slate-100 py-4">
+                    <DetailItem label="Position" value={application.position} />
+
+                    <DetailItem
+                      label="Experience"
+                      value={application.experience || "Not provided"}
+                    />
+
+                    <DetailItem
+                      label="Location"
+                      value={application.location || "Not provided"}
+                    />
+
+                    <DetailItem
+                      label="Applied"
+                      value={formatDate(application.created_at)}
+                    />
+                  </div>
+
+                  <div className="mt-5">
+                    <p className="mb-2 text-xs font-medium text-slate-500">
+                      Status
+                    </p>
+
+                    <StatusSelect
+                      application={application}
+                      disabled={updatingId === application.id}
+                      onChange={(newStatus) => {
+                        void handleStatusChange(application, newStatus)
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <button
+                      type="button"
+                      disabled={loadingDetailsId === application.id}
+                      onClick={() => {
+                        void handleView(application.id)
+                      }}
+                      className={mobileActionClassName}
+                    >
+                      <Eye className="size-4" />
+                      View
+                    </button>
+
+                    {application.linkedin_url && (
+                      <a
+                        href={application.linkedin_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                      >
+                        <ExternalLink className="size-4" />
+                        LinkedIn
+                      </a>
+                    )}
+
+                    {application.resume_url && (
+                      <a
+                        href={
+                          getApiAssetUrl(application.resume_url) ?? undefined
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                      >
+                        <FileText className="size-4" />
+                        Résumé
+                      </a>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={deletingId === application.id}
+                      onClick={() => {
+                        void handleDelete(application)
+                      }}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Trash2 className="size-4" />
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-600">
                 Showing{" "}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-950">
                   {startIndex + 1}
                 </span>{" "}
                 to{" "}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-950">
                   {Math.min(
                     startIndex + applicationsPerPage,
                     filteredApplications.length
                   )}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-950">
                   {filteredApplications.length}
                 </span>{" "}
                 applications
               </p>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
                 <button
                   type="button"
                   disabled={safeCurrentPage === 1}
                   onClick={() => setCurrentPage((page) => page - 1)}
-                  className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={paginationButtonClassName}
                 >
+                  <ArrowLeft className="size-4" />
                   Previous
                 </button>
 
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium whitespace-nowrap text-slate-600">
                   Page {safeCurrentPage} of {totalPages}
                 </span>
 
@@ -553,9 +693,10 @@ export default function AdminCareerApplications() {
                   type="button"
                   disabled={safeCurrentPage === totalPages}
                   onClick={() => setCurrentPage((page) => page + 1)}
-                  className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={paginationButtonClassName}
                 >
                   Next
+                  <ArrowRight className="size-4" />
                 </button>
               </div>
             </div>
@@ -572,20 +713,136 @@ export default function AdminCareerApplications() {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function CandidateAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("")
+
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
+    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-violet-50 text-sm font-black text-indigo-700 ring-1 ring-indigo-100 ring-inset">
+      {initials || "CA"}
+    </div>
+  )
+}
+
+function StatusSelect({
+  application,
+  disabled,
+  onChange,
+}: {
+  application: AdminCareerApplication
+  disabled: boolean
+  onChange: (status: CareerApplicationStatus) => void
+}) {
+  return (
+    <select
+      value={application.status}
+      disabled={disabled}
+      onChange={(event) =>
+        onChange(event.target.value as CareerApplicationStatus)
+      }
+      aria-label={`Change status for ${application.full_name}`}
+      className={`rounded-xl border border-transparent px-3 py-2 text-sm font-semibold ring-1 transition outline-none ring-inset focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50 ${
+        statusClasses[application.status]
+      }`}
+    >
+      <option value="new">New</option>
+      <option value="reviewing">Reviewing</option>
+      <option value="shortlisted">Shortlisted</option>
+      <option value="rejected">Rejected</option>
+      <option value="hired">Hired</option>
+    </select>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  description,
+  icon,
+  tone = "default",
+}: {
+  label: string
+  value: number
+  description: string
+  icon: ReactNode
+  tone?: "default" | "info" | "featured" | "success"
+}) {
+  const toneClasses = {
+    default: "bg-slate-100 text-slate-700",
+    info: "bg-blue-50 text-blue-700",
+    featured: "bg-violet-50 text-violet-700",
+    success: "bg-emerald-50 text-emerald-700",
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
 
-          <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            {value}
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
         </div>
 
-        <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-          <Briefcase className="h-6 w-6" />
-        </div>
+        <div className={`rounded-xl p-3 ${toneClasses[tone]}`}>{icon}</div>
       </div>
     </div>
   )
 }
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-800">{value}</p>
+    </div>
+  )
+}
+
+function TableHeading({
+  children,
+  align = "left",
+}: {
+  children: ReactNode
+  align?: "left" | "right"
+}) {
+  return (
+    <th
+      className={`px-6 py-4 text-xs font-semibold tracking-wider text-slate-500 uppercase ${
+        align === "right" ? "text-right" : "text-left"
+      }`}
+    >
+      {children}
+    </th>
+  )
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+const inputClassName =
+  "h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pr-4 pl-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+
+const selectClassName =
+  "h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+
+const actionButtonClassName =
+  "inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+
+const mobileActionClassName =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+
+const paginationButtonClassName =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
