@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -46,7 +46,7 @@ export default function ServiceDetails() {
   const [hasError, setHasError] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
-  async function loadService() {
+  const loadService = useCallback(async () => {
     if (!slug) {
       setNotFound(true)
       setIsLoading(false)
@@ -83,11 +83,11 @@ export default function ServiceDetails() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [slug])
 
   useEffect(() => {
     void loadService()
-  }, [slug])
+  }, [loadService])
 
   if (isLoading) {
     return <PageLoader message="Loading service..." />

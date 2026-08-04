@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import axios from "axios"
 import { ArrowLeft, CalendarDays, UserRound } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
@@ -23,7 +23,7 @@ export default function BlogDetails() {
   const [hasError, setHasError] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
-  async function loadBlog() {
+  const loadBlog = useCallback(async () => {
     if (!slug) {
       setNotFound(true)
       setIsLoading(false)
@@ -49,11 +49,11 @@ export default function BlogDetails() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [slug])
 
   useEffect(() => {
     void loadBlog()
-  }, [slug])
+  }, [loadBlog])
 
   if (isLoading) {
     return <PageLoader message="Loading article..." />

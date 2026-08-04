@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
 import axios from "axios"
 import {
   CheckCircle2,
@@ -121,7 +127,7 @@ export default function AdminTechnologyEdit() {
     }))
   }
 
-  async function loadTechnology() {
+  const loadTechnology = useCallback(async () => {
     if (!Number.isInteger(parsedTechnologyId) || parsedTechnologyId <= 0) {
       setHasError(true)
       setIsLoading(false)
@@ -153,7 +159,7 @@ export default function AdminTechnologyEdit() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [parsedTechnologyId])
 
   async function handleSubmit() {
     if (isSubmitting) {
@@ -244,7 +250,7 @@ export default function AdminTechnologyEdit() {
 
   useEffect(() => {
     void loadTechnology()
-  }, [technologyId])
+  }, [loadTechnology])
 
   const requiredChecks = useMemo(
     () => [

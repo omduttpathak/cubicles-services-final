@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
   closestCenter,
   DndContext,
@@ -136,28 +136,26 @@ export default function AdminHomepage() {
     })
   )
 
-  function getPreviewSettings(): HomepageSettings {
-    return {
+  const sendPreviewUpdate = useCallback(() => {
+    const settings: HomepageSettings = {
       id: 0,
       ...formData,
     }
-  }
 
-  function sendPreviewUpdate() {
     previewRef.current?.contentWindow?.postMessage(
       {
         type: "homepage-preview-update",
-        settings: getPreviewSettings(),
+        settings,
       },
       window.location.origin
     )
-  }
+  }, [formData])
 
   useEffect(() => {
     const timeout = window.setTimeout(sendPreviewUpdate, 120)
 
     return () => window.clearTimeout(timeout)
-  }, [formData, previewKey])
+  }, [previewKey, sendPreviewUpdate])
 
   useEffect(() => {
     function handlePreviewReady(event: MessageEvent) {
@@ -174,7 +172,7 @@ export default function AdminHomepage() {
     return () => {
       window.removeEventListener("message", handlePreviewReady)
     }
-  }, [formData])
+  }, [sendPreviewUpdate])
 
   function updateField<Key extends keyof UpdateHomepageSettingsRequest>(
     field: Key,

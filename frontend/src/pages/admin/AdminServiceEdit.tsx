@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import axios from "axios"
 import {
   CheckCircle2,
@@ -117,7 +117,7 @@ export default function AdminServiceEdit() {
     })
   }
 
-  async function loadService() {
+  const loadService = useCallback(async () => {
     if (!Number.isInteger(parsedServiceId) || parsedServiceId <= 0) {
       setHasError(true)
       setIsLoading(false)
@@ -148,7 +148,7 @@ export default function AdminServiceEdit() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [parsedServiceId])
 
   async function handleSubmit() {
     const normalizedHighlights = formData.highlights
@@ -271,7 +271,7 @@ export default function AdminServiceEdit() {
 
   useEffect(() => {
     void loadService()
-  }, [serviceId])
+  }, [loadService])
 
   if (isLoading) {
     return <PageLoader message="Loading service..." />

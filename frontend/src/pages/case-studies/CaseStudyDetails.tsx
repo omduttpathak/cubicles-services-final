@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import axios from "axios"
 import { ArrowLeft, CheckCircle2, Layers3 } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
@@ -20,7 +20,7 @@ export default function CaseStudyDetails() {
   const [hasError, setHasError] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
-  async function loadCaseStudy() {
+  const loadCaseStudy = useCallback(async () => {
     if (!slug) {
       setNotFound(true)
       setIsLoading(false)
@@ -46,11 +46,11 @@ export default function CaseStudyDetails() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [slug])
 
   useEffect(() => {
     void loadCaseStudy()
-  }, [slug])
+  }, [loadCaseStudy])
 
   if (isLoading) {
     return <PageLoader message="Loading case study..." />

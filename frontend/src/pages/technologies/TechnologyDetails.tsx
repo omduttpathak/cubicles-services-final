@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import axios from "axios"
 import { ArrowLeft, CheckCircle2, Cpu, Sparkles } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
@@ -24,7 +24,7 @@ export default function TechnologyDetails() {
   const [hasError, setHasError] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
-  async function loadTechnology() {
+  const loadTechnology = useCallback(async () => {
     if (!slug) {
       setNotFound(true)
       setIsLoading(false)
@@ -50,11 +50,11 @@ export default function TechnologyDetails() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [slug])
 
   useEffect(() => {
     void loadTechnology()
-  }, [slug])
+  }, [loadTechnology])
 
   if (isLoading) {
     return <PageLoader message="Loading technology..." />

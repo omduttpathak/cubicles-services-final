@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
 import axios from "axios"
 import {
   BookOpen,
@@ -84,7 +90,7 @@ export default function AdminBlogEdit() {
     }))
   }
 
-  async function loadBlog() {
+  const loadBlog = useCallback(async () => {
     if (!Number.isInteger(parsedBlogId) || parsedBlogId <= 0) {
       setHasError(true)
       setIsLoading(false)
@@ -114,7 +120,7 @@ export default function AdminBlogEdit() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [parsedBlogId])
 
   async function handleSubmit() {
     const hasMissingField = requiredFields.some((field) => {
@@ -183,7 +189,7 @@ export default function AdminBlogEdit() {
 
   useEffect(() => {
     void loadBlog()
-  }, [blogId])
+  }, [loadBlog])
 
   const completedFields = useMemo(
     () =>

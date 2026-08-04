@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
 import axios from "axios"
 import {
   BriefcaseBusiness,
@@ -127,7 +133,7 @@ export default function AdminCaseStudyEdit() {
     }))
   }
 
-  async function loadCaseStudy() {
+  const loadCaseStudy = useCallback(async () => {
     if (!Number.isInteger(parsedCaseStudyId) || parsedCaseStudyId <= 0) {
       setHasError(true)
       setIsLoading(false)
@@ -163,7 +169,7 @@ export default function AdminCaseStudyEdit() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [parsedCaseStudyId])
 
   async function handleSubmit() {
     if (isSubmitting) {
@@ -263,7 +269,7 @@ export default function AdminCaseStudyEdit() {
 
   useEffect(() => {
     void loadCaseStudy()
-  }, [caseStudyId])
+  }, [loadCaseStudy])
 
   const requiredChecks = useMemo(
     () => [
