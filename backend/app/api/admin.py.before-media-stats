@@ -1693,18 +1693,6 @@ async def upload_admin_image(
 
 
 @router.get(
-    "/media-stats",
-)
-def get_admin_media_stats(
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(
-        get_current_admin,
-    ),
-):
-    return MediaAssetService(db).get_dashboard_stats()
-
-
-@router.get(
     "/media",
 )
 def get_admin_media_library(

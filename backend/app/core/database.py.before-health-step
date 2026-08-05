@@ -3,12 +3,9 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-
 engine = create_engine(
     settings.DATABASE_URL,
-    echo=settings.database_echo,
-    pool_pre_ping=True,
-    pool_recycle=1800,
+    echo=True,
 )
 
 SessionLocal = sessionmaker(
@@ -23,5 +20,6 @@ def get_db():
 
     try:
         yield db
+
     finally:
         db.close()

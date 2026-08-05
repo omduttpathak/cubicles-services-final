@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 
 type KPICardProps = {
   label: string
-  value: number | string
+  value: number
   helper: string
   icon: ReactNode
   iconClassName: string

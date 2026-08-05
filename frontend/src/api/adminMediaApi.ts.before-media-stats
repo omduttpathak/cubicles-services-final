@@ -24,28 +24,3 @@ export async function getAdminMedia(): Promise<AdminMediaItem[]> {
 export async function deleteAdminMedia(filename: string): Promise<void> {
   await api.delete(`/admin/media/${encodeURIComponent(filename)}`)
 }
-
-export type AdminMediaRecentUpload = {
-  filename: string
-  original_filename: string
-  file_url: string
-  extension: string
-  size_bytes: number
-  created_at: string
-  is_used: boolean
-  usage_count: number
-}
-
-export type AdminMediaDashboardStats = {
-  total_media: number
-  storage_used_bytes: number
-  images_in_use: number
-  unused_images: number
-  recent_uploads: AdminMediaRecentUpload[]
-}
-
-export async function getAdminMediaStats(): Promise<AdminMediaDashboardStats> {
-  const response = await api.get<AdminMediaDashboardStats>("/admin/media-stats")
-
-  return response.data
-}

@@ -1,24 +1,31 @@
-version: "3.9"
-
 services:
   mysql:
     image: mysql:8.4
-
     container_name: cubicles-mysql
-
     restart: unless-stopped
 
     ports:
       - "3306:3306"
 
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: cubicles_services
-      MYSQL_USER: cubicles
-      MYSQL_PASSWORD: Cubicles123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cubicles_services}
+      MYSQL_USER: ${MYSQL_USER:-cubicles}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
 
     volumes:
       - mysql_data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   mysql_data:

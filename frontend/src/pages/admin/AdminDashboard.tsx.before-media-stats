@@ -3,9 +3,6 @@ import {
   BookOpen,
   BriefcaseBusiness,
   Cpu,
-  FileImage,
-  HardDrive,
-  Images,
   Mail,
   UsersRound,
   Wrench,
@@ -30,10 +27,6 @@ import {
 } from "@/api/adminCaseStudiesApi"
 import { getAdminServices } from "@/api/adminServicesApi"
 import { getAdminTechnologies } from "@/api/adminTechnologiesApi"
-import {
-  getAdminMediaStats,
-  type AdminMediaDashboardStats,
-} from "@/api/adminMediaApi"
 import {
   ActivityItem,
   ActivityList,
@@ -84,9 +77,6 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
 
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
-  const [mediaStats, setMediaStats] = useState<AdminMediaDashboardStats | null>(
-    null
-  )
   const [recentContacts, setRecentContacts] = useState<AdminContact[]>([])
   const [recentBlogs, setRecentBlogs] = useState<AdminBlog[]>([])
   const [recentCaseStudies, setRecentCaseStudies] = useState<AdminCaseStudy[]>(
@@ -113,7 +103,6 @@ export default function AdminDashboard() {
         servicesResponse,
         technologiesResponse,
         applicationsResponse,
-        mediaStatsResponse,
       ] = await Promise.all([
         getAdminDashboardStats(),
         getAdminContacts(),
@@ -122,7 +111,6 @@ export default function AdminDashboard() {
         getAdminServices(),
         getAdminTechnologies(),
         getAdminCareerApplications(),
-        getAdminMediaStats(),
       ])
 
       const sortedApplications = [...applicationsResponse].sort(
@@ -137,7 +125,6 @@ export default function AdminDashboard() {
       setRecentCaseStudies(caseStudiesResponse.slice(0, 5))
       setRecentApplications(sortedApplications.slice(0, 5))
       setApplications(applicationsResponse)
-      setMediaStats(mediaStatsResponse)
 
       setSummary({
         totalBlogs: blogsResponse.length,
@@ -182,7 +169,7 @@ export default function AdminDashboard() {
     return <PageLoader message="Loading dashboard..." />
   }
 
-  if (hasError || !stats || !mediaStats) {
+  if (hasError || !stats) {
     return (
       <ErrorState
         title="Unable to Load Dashboard"
@@ -282,46 +269,6 @@ export default function AdminDashboard() {
             onClick={() => navigate("/admin/contacts")}
           />
         </KPIGrid>
-
-        <DashboardSection
-          title="Media overview"
-          description="Database-backed image usage and storage information."
-          onViewAll={() => navigate("/admin/media")}
-        >
-          <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-4">
-            <MediaMetricCard
-              label="Total Media"
-              value={mediaStats.total_media}
-              helper="All database-backed assets"
-              icon={<Images className="size-5" />}
-              iconClassName="bg-blue-50 text-blue-600"
-            />
-
-            <MediaMetricCard
-              label="Storage Used"
-              value={formatFileSize(mediaStats.storage_used_bytes)}
-              helper="Combined binary storage"
-              icon={<HardDrive className="size-5" />}
-              iconClassName="bg-violet-50 text-violet-600"
-            />
-
-            <MediaMetricCard
-              label="In Use"
-              value={mediaStats.images_in_use}
-              helper="Protected by content references"
-              icon={<FileImage className="size-5" />}
-              iconClassName="bg-amber-50 text-amber-600"
-            />
-
-            <MediaMetricCard
-              label="Unused"
-              value={mediaStats.unused_images}
-              helper="Available for safe cleanup"
-              icon={<FileImage className="size-5" />}
-              iconClassName="bg-emerald-50 text-emerald-600"
-            />
-          </div>
-        </DashboardSection>
 
         <div className="grid gap-6 xl:grid-cols-2">
           <DashboardSection
@@ -458,48 +405,6 @@ export default function AdminDashboard() {
           </DashboardSection>
 
           <DashboardSection
-            title="Recent media uploads"
-            description="Latest images added to the database-backed Media Library."
-            onViewAll={() => navigate("/admin/media")}
-          >
-            {mediaStats.recent_uploads.length === 0 ? (
-              <EmptyState
-                icon={<Images className="size-6" />}
-                title="No media uploads"
-                message="Recently uploaded images will appear here."
-              />
-            ) : (
-              <ActivityList>
-                {mediaStats.recent_uploads.map((item) => (
-                  <ActivityItem
-                    key={item.filename}
-                    title={item.original_filename || item.filename}
-                    meta={`${item.extension.toUpperCase()} • ${formatFileSize(
-                      item.size_bytes
-                    )} • ${item.usage_count} reference${
-                      item.usage_count === 1 ? "" : "s"
-                    }`}
-                    badge={
-                      <span
-                        className={[
-                          "shrink-0 rounded-full border px-2.5 py-1 text-xs font-bold",
-                          item.is_used
-                            ? "border-amber-200 bg-amber-50 text-amber-700"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                        ].join(" ")}
-                      >
-                        {item.is_used ? "In Use" : "Unused"}
-                      </span>
-                    }
-                    date={<DateValue value={item.created_at} />}
-                    onClick={() => navigate("/admin/media")}
-                  />
-                ))}
-              </ActivityList>
-            )}
-          </DashboardSection>
-
-          <DashboardSection
             title="Recent blogs"
             description="Recently created and updated articles."
             onViewAll={() => navigate("/admin/blogs")}
@@ -558,56 +463,6 @@ export default function AdminDashboard() {
       </div>
     </>
   )
-}
-
-function MediaMetricCard({
-  label,
-  value,
-  helper,
-  icon,
-  iconClassName,
-}: {
-  label: string
-  value: number | string
-  helper: string
-  icon: React.ReactNode
-  iconClassName: string
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5">
-      <div
-        className={`flex size-11 items-center justify-center rounded-xl ${iconClassName}`}
-      >
-        {icon}
-      </div>
-
-      <p className="mt-5 text-sm font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-extrabold tracking-[-0.04em] text-slate-950">
-        {value}
-      </p>
-      <p className="mt-2 text-xs leading-5 text-slate-500">{helper}</p>
-    </div>
-  )
-}
-
-function formatFileSize(sizeBytes: number): string {
-  if (sizeBytes < 1024) {
-    return `${sizeBytes} B`
-  }
-
-  const kilobytes = sizeBytes / 1024
-
-  if (kilobytes < 1024) {
-    return `${kilobytes.toFixed(1)} KB`
-  }
-
-  const megabytes = kilobytes / 1024
-
-  if (megabytes < 1024) {
-    return `${megabytes.toFixed(1)} MB`
-  }
-
-  return `${(megabytes / 1024).toFixed(1)} GB`
 }
 
 function createApplicationBreakdown(

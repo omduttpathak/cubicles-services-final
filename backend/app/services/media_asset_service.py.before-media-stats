@@ -4,19 +4,17 @@ from pathlib import Path
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.blog import Blog
 from app.models.case_study import CaseStudy
 from app.models.media_asset import MediaAsset
-from app.models.media_asset_variant import MediaAssetVariant
 from app.models.site_setting import SiteSetting
 from app.models.service import Service
 from app.models.technology import Technology
 from app.repositories.media_asset_repository import MediaAssetRepository
-from app.repositories.media_asset_variant_repository import MediaAssetVariantRepository
 
 
 ALLOWED_IMAGE_EXTENSIONS = {
@@ -39,24 +37,11 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
-MEDIA_VARIANT_WIDTHS = {
-    "thumbnail": 320,
-    "medium": 768,
-    "large": 1440,
-}
-
-VARIANT_SUPPORTED_MIME_TYPES = {
-    "image/png",
-    "image/jpeg",
-    "image/webp",
-}
-
 
 class MediaAssetService:
     def __init__(self, db: Session):
         self.db = db
         self.repository = MediaAssetRepository(db)
-        self.variant_repository = MediaAssetVariantRepository(db)
 
     def create_image(
         self,
@@ -85,7 +70,6 @@ class MediaAssetService:
         existing = self.repository.get_by_checksum(checksum)
 
         if existing is not None:
-            self.ensure_variants(existing)
             return existing
 
         width, height = self._get_dimensions(
@@ -112,10 +96,7 @@ class MediaAssetService:
             file_data=file_content,
         )
 
-        created_asset = self.repository.create(asset)
-        self.ensure_variants(created_asset)
-
-        return created_asset
+        return self.repository.create(asset)
 
     def get_by_public_id(self, public_id: str) -> MediaAsset | None:
         return self.repository.get_by_public_id(public_id)
@@ -171,135 +152,6 @@ class MediaAssetService:
             )
 
         return int(asset.id)
-
-    def get_variant(
-        self,
-        asset: MediaAsset,
-        variant_name: str,
-    ) -> MediaAssetVariant | None:
-        return self.variant_repository.get(
-            int(asset.id),
-            variant_name,
-        )
-
-    def ensure_variants(
-        self,
-        asset: MediaAsset,
-    ) -> list[MediaAssetVariant]:
-        if asset.mime_type not in VARIANT_SUPPORTED_MIME_TYPES:
-            return []
-
-        if not asset.width or not asset.height:
-            return []
-
-        created_variants: list[MediaAssetVariant] = []
-
-        try:
-            with Image.open(BytesIO(asset.file_data)) as source_image:
-                source_image = ImageOps.exif_transpose(source_image)
-
-                for variant_name, target_width in MEDIA_VARIANT_WIDTHS.items():
-                    if self.variant_repository.get(int(asset.id), variant_name):
-                        continue
-
-                    if source_image.width <= target_width:
-                        continue
-
-                    variant_image = source_image.copy()
-                    target_height = max(
-                        1,
-                        round(
-                            source_image.height
-                            * target_width
-                            / source_image.width
-                        ),
-                    )
-                    variant_image.thumbnail(
-                        (target_width, target_height),
-                        Image.Resampling.LANCZOS,
-                    )
-
-                    if variant_image.mode not in {"RGB", "RGBA", "LA"}:
-                        variant_image = variant_image.convert("RGBA")
-
-                    output = BytesIO()
-                    variant_image.save(
-                        output,
-                        format="WEBP",
-                        quality=82,
-                        method=6,
-                    )
-                    variant_data = output.getvalue()
-
-                    variant = MediaAssetVariant(
-                        media_asset_id=asset.id,
-                        variant_name=variant_name,
-                        filename=(
-                            f"{Path(asset.filename).stem}-"
-                            f"{variant_name}.webp"
-                        ),
-                        mime_type="image/webp",
-                        extension=".webp",
-                        file_size=len(variant_data),
-                        width=variant_image.width,
-                        height=variant_image.height,
-                        checksum=sha256(variant_data).hexdigest(),
-                        file_data=variant_data,
-                    )
-                    created_variants.append(
-                        self.variant_repository.create(variant)
-                    )
-        except (UnidentifiedImageError, OSError, ValueError):
-            return []
-
-        return created_variants
-
-    def get_dashboard_stats(
-        self,
-        recent_limit: int = 5,
-    ) -> dict[str, object]:
-        assets = self.list_assets()
-
-        total_media = len(assets)
-        storage_used_bytes = (
-            sum(
-                int(asset.file_size)
-                for asset in assets
-            )
-            + self.variant_repository.total_storage_bytes()
-        )
-
-        recent_uploads = []
-
-        for asset in assets[:recent_limit]:
-            usage = self.get_usage(asset)
-
-            recent_uploads.append(
-                {
-                    "filename": asset.filename,
-                    "original_filename": asset.original_filename,
-                    "file_url": f"/api/media/{asset.public_id}",
-                    "extension": asset.extension,
-                    "size_bytes": int(asset.file_size),
-                    "created_at": asset.created_at.isoformat(),
-                    "is_used": bool(usage),
-                    "usage_count": len(usage),
-                }
-            )
-
-        images_in_use = sum(
-            1
-            for asset in assets
-            if self.get_usage(asset)
-        )
-
-        return {
-            "total_media": total_media,
-            "storage_used_bytes": storage_used_bytes,
-            "images_in_use": images_in_use,
-            "unused_images": total_media - images_in_use,
-            "recent_uploads": recent_uploads,
-        }
 
     def get_usage(
         self,
