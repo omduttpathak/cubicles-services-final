@@ -6,6 +6,7 @@ import { getNavigation, type NavigationItem } from "@/api/navigationApi"
 import { useSiteSettings } from "@/context/SiteSettingsContext"
 
 import MobileMenu from "./MobileMenu"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 const fallbackNavigation: NavigationItem[] = [
   {
@@ -132,7 +133,7 @@ export default function Header() {
                     <div className="absolute inset-0 scale-110 rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/10 opacity-0 blur-lg transition duration-300 group-hover:opacity-100" />
 
                     <img
-                      src={settings.logo_url}
+                      src={resolveMediaUrl(settings.logo_url) ?? undefined}
                       alt={`${settings.company_name} logo`}
                       className="relative h-10 w-auto max-w-44 object-contain transition duration-300 group-hover:scale-[1.03]"
                     />

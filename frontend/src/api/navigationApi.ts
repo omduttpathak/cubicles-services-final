@@ -11,11 +11,7 @@ export type NavigationItem = {
 type UnknownRecord = Record<string, unknown>
 
 function isRecord(value: unknown): value is UnknownRecord {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  )
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 function findNavigationArray(payload: unknown): unknown[] {
@@ -71,17 +67,9 @@ function normalizeNavigationItem(
     return null
   }
 
-  const rawTitle =
-    value.title ??
-    value.label ??
-    value.name ??
-    value.menu_title
+  const rawTitle = value.title ?? value.label ?? value.name ?? value.menu_title
 
-  const rawUrl =
-    value.url ??
-    value.path ??
-    value.href ??
-    value.link
+  const rawUrl = value.url ?? value.path ?? value.href ?? value.link
 
   if (
     typeof rawTitle !== "string" ||
@@ -102,10 +90,7 @@ function normalizeNavigationItem(
         : index + 1
 
   const rawDisplayOrder =
-    value.display_order ??
-    value.order ??
-    value.sort_order ??
-    value.position
+    value.display_order ?? value.order ?? value.sort_order ?? value.position
 
   const displayOrder =
     typeof rawDisplayOrder === "number"
@@ -116,9 +101,7 @@ function normalizeNavigationItem(
         : index + 1
 
   const rawOpenInNewTab =
-    value.open_in_new_tab ??
-    value.new_tab ??
-    value.target_blank
+    value.open_in_new_tab ?? value.new_tab ?? value.target_blank
 
   const openInNewTab =
     rawOpenInNewTab === true ||
@@ -135,24 +118,18 @@ function normalizeNavigationItem(
   }
 }
 
-function normalizeNavigationResponse(
-  payload: unknown
-): NavigationItem[] {
+function normalizeNavigationResponse(payload: unknown): NavigationItem[] {
   const rawItems = findNavigationArray(payload)
 
   return rawItems
     .map((item, index) => normalizeNavigationItem(item, index))
-    .filter(
-      (item): item is NavigationItem => item !== null
-    )
+    .filter((item): item is NavigationItem => item !== null)
 }
 
 export async function getNavigation(): Promise<NavigationItem[]> {
   const response = await api.get<unknown>("/navigation")
 
-  const navigationItems = normalizeNavigationResponse(
-    response.data
-  )
+  const navigationItems = normalizeNavigationResponse(response.data)
 
   if (navigationItems.length === 0) {
     console.warn(

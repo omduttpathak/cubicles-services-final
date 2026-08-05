@@ -4,6 +4,7 @@ import { Check, FileImage, Search, X } from "lucide-react"
 import { getAdminMedia, type AdminMediaItem } from "@/api/adminMediaApi"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 type MediaPickerModalProps = {
   isOpen: boolean
@@ -200,7 +201,7 @@ export default function MediaPickerModal({
                   >
                     <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-slate-100">
                       <img
-                        src={item.file_url}
+                        src={resolveMediaUrl(item.file_url) ?? undefined}
                         alt={item.filename}
                         className="h-full w-full object-contain p-3"
                       />

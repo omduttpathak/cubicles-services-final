@@ -38,6 +38,7 @@ import FormField from "@/components/admin/forms/FormField"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 const initialFormData: SiteSettingsRequest = {
   company_name: "Cubicles Services",
@@ -926,7 +927,7 @@ function BrandPreview({ formData }: { formData: SiteSettingsRequest }) {
           {formData.logo_url ? (
             <div className="flex size-11 items-center justify-center overflow-hidden rounded-xl bg-white p-2">
               <img
-                src={formData.logo_url}
+                src={resolveMediaUrl(formData.logo_url) ?? undefined}
                 alt="Logo preview"
                 className="max-h-full max-w-full object-contain"
               />

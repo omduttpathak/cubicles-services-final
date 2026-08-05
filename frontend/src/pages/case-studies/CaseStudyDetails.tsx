@@ -11,6 +11,7 @@ import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import RichTextContent from "@/components/common/RichTextContent"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 export default function CaseStudyDetails() {
   const { slug } = useParams<{ slug: string }>()
@@ -117,7 +118,7 @@ export default function CaseStudyDetails() {
         {caseStudy.imageUrl && (
           <div className="container mx-auto px-6">
             <img
-              src={caseStudy.imageUrl}
+              src={resolveMediaUrl(caseStudy.imageUrl) ?? undefined}
               alt={caseStudy.title}
               className="mx-auto -mt-10 max-h-[520px] w-full max-w-6xl rounded-2xl object-cover shadow-xl"
             />

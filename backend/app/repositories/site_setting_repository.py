@@ -1,9 +1,9 @@
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.models.site_setting import SiteSetting
-from app.schemas.site_setting import (
-    SiteSettingUpdate,
-)
+from app.schemas.site_setting import SiteSettingUpdate
 
 
 class SiteSettingRepository:
@@ -30,28 +30,44 @@ class SiteSettingRepository:
     def create(
         self,
         data: SiteSettingUpdate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> SiteSetting:
-        settings = SiteSetting(
-            **data.model_dump(),
-        )
+        values = data.model_dump()
 
-        self.db.add(settings)
-        self.db.commit()
-        self.db.refresh(settings)
+        if extra_fields:
+            values.update(extra_fields)
 
-        return settings
+        settings = SiteSetting(**values)
+
+        try:
+            self.db.add(settings)
+            self.db.commit()
+            self.db.refresh(settings)
+            return settings
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update(
         self,
         settings: SiteSetting,
         data: SiteSettingUpdate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> SiteSetting:
         update_data = data.model_dump()
 
-        for field, value in update_data.items():
-            setattr(settings, field, value)
+        if extra_fields:
+            update_data.update(extra_fields)
 
-        self.db.commit()
-        self.db.refresh(settings)
+        try:
+            for field, value in update_data.items():
+                setattr(settings, field, value)
 
-        return settings
+            self.db.commit()
+            self.db.refresh(settings)
+            return settings
+        except Exception:
+            self.db.rollback()
+            raise

@@ -11,6 +11,7 @@ import {
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 export default function CaseStudies() {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([])
@@ -342,7 +343,7 @@ export default function CaseStudies() {
                     <div className="relative overflow-hidden">
                       {caseStudy.imageUrl ? (
                         <img
-                          src={caseStudy.imageUrl}
+                          src={resolveMediaUrl(caseStudy.imageUrl) ?? undefined}
                           alt={caseStudy.title}
                           className="h-64 w-full object-cover transition duration-700 group-hover:scale-105"
                           loading="lazy"

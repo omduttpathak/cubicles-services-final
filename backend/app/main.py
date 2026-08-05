@@ -26,6 +26,7 @@ from app.api.homepage_testimonials import (
     router as homepage_testimonials_router,
 )
 from app.api.job_openings import router as job_openings_router
+from app.api.media import router as media_router
 from app.api.navigation import router as navigation_router
 from app.api.services import router as services_router
 from app.api.services_page import router as services_page_router
@@ -93,6 +94,7 @@ app.mount(
 app.include_router(contact_router)
 app.include_router(admin_router)
 app.include_router(auth_router)
+app.include_router(media_router)
 
 app.include_router(homepage_router)
 app.include_router(homepage_stats_router)

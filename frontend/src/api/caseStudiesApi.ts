@@ -13,13 +13,12 @@ export type CaseStudyApiResponse = {
   published_at: string
 }
 
-export type CaseStudyDetailsApiResponse =
-  CaseStudyApiResponse & {
-    challenge: string
-    solution: string
-    seo_title: string
-    seo_description: string
-  }
+export type CaseStudyDetailsApiResponse = CaseStudyApiResponse & {
+  challenge: string
+  solution: string
+  seo_title: string
+  seo_description: string
+}
 
 export type CaseStudy = {
   id: number
@@ -49,9 +48,7 @@ type CaseStudiesApiEnvelope = {
   results?: CaseStudyApiResponse[]
 }
 
-function mapCaseStudy(
-  caseStudy: CaseStudyApiResponse
-): CaseStudy {
+function mapCaseStudy(caseStudy: CaseStudyApiResponse): CaseStudy {
   return {
     id: caseStudy.id,
     title: caseStudy.title,
@@ -59,9 +56,7 @@ function mapCaseStudy(
     industry: caseStudy.industry,
     service: caseStudy.service,
     summary: caseStudy.summary,
-    results: Array.isArray(caseStudy.results)
-      ? caseStudy.results
-      : [],
+    results: Array.isArray(caseStudy.results) ? caseStudy.results : [],
     technologies: Array.isArray(caseStudy.technologies)
       ? caseStudy.technologies
       : [],
@@ -82,9 +77,7 @@ function mapCaseStudyDetails(
   }
 }
 
-function extractCaseStudies(
-  payload: unknown
-): CaseStudyApiResponse[] {
+function extractCaseStudies(payload: unknown): CaseStudyApiResponse[] {
   if (Array.isArray(payload)) {
     return payload as CaseStudyApiResponse[]
   }
@@ -131,10 +124,9 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
 export async function getCaseStudyBySlug(
   slug: string
 ): Promise<CaseStudyDetails> {
-  const response =
-    await api.get<CaseStudyDetailsApiResponse>(
-      `/case-studies/${slug}`
-    )
+  const response = await api.get<CaseStudyDetailsApiResponse>(
+    `/case-studies/${slug}`
+  )
 
   return mapCaseStudyDetails(response.data)
 }

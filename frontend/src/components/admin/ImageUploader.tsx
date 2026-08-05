@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { uploadAdminImage } from "@/api/adminUploadsApi"
 import MediaPickerModal from "@/components/admin/MediaPickerModal"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 type ImageUploaderProps = {
   label: string
@@ -93,7 +94,7 @@ export default function ImageUploader({
               }`}
             >
               <img
-                src={value}
+                src={resolveMediaUrl(value) ?? undefined}
                 alt={`${label} preview`}
                 className={
                   compactPreview

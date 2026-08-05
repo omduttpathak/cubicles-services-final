@@ -24,6 +24,7 @@ import {
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 const technologiesPerPage = 8
 
@@ -604,7 +605,7 @@ function TechnologyVisual({ technology }: { technology: AdminTechnology }) {
     return (
       <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <img
-          src={technology.logo_url}
+          src={resolveMediaUrl(technology.logo_url) ?? undefined}
           alt={`${technology.name} logo`}
           className="size-9 object-contain"
         />

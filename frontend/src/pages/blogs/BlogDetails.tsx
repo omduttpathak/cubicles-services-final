@@ -11,6 +11,7 @@ import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import RichTextContent from "@/components/common/RichTextContent"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 export default function BlogDetails() {
   const { slug } = useParams<{
@@ -131,7 +132,7 @@ export default function BlogDetails() {
         {blog.imageUrl && (
           <div className="container mx-auto px-6">
             <img
-              src={blog.imageUrl}
+              src={resolveMediaUrl(blog.imageUrl) ?? undefined}
               alt={blog.title}
               className="mx-auto -mt-10 max-h-[520px] w-full max-w-5xl rounded-2xl object-cover shadow-xl"
             />

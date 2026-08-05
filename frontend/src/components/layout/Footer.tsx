@@ -16,6 +16,7 @@ import { Link } from "react-router-dom"
 import { getFooterLinks, type FooterLink } from "@/api/footerLinksApi"
 import { Button } from "@/components/ui/button"
 import { useSiteSettings } from "@/context/SiteSettingsContext"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 const fallbackFooterLinks: FooterLink[] = [
   {
@@ -264,7 +265,7 @@ export default function Footer() {
             >
               {settings.logo_url ? (
                 <img
-                  src={settings.logo_url}
+                  src={resolveMediaUrl(settings.logo_url) ?? undefined}
                   alt={`${companyName} logo`}
                   className="h-12 w-auto max-w-56 object-contain object-left"
                 />

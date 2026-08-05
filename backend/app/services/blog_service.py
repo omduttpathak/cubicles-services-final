@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session
 from app.models.blog import Blog
 from app.repositories.blog_repository import BlogRepository
 from app.schemas.blog import BlogCreate, BlogUpdate
+from app.services.media_asset_service import MediaAssetService
 
 
 class BlogService:
     def __init__(self, db: Session):
         self.repository = BlogRepository(db)
+        self.media_service = MediaAssetService(db)
 
     def get_blogs(self) -> list[Blog]:
         return self.repository.get_published_blogs()
@@ -18,9 +20,7 @@ class BlogService:
         self,
         slug: str,
     ) -> Blog | None:
-        return self.repository.get_published_blog_by_slug(
-            slug,
-        )
+        return self.repository.get_published_blog_by_slug(slug)
 
     def get_admin_blogs(self) -> list[Blog]:
         return self.repository.get_all()
@@ -37,19 +37,12 @@ class BlogService:
     ) -> Blog:
         normalized_slug = data.slug.strip().lower()
 
-        existing_blog = self.repository.get_by_slug(
-            normalized_slug,
-        )
+        if self.repository.get_by_slug(normalized_slug) is not None:
+            raise ValueError("A blog with this slug already exists")
 
-        if existing_blog is not None:
-            raise ValueError(
-                "A blog with this slug already exists",
-            )
-
-        published_at = data.published_at
-
-        if published_at is None:
-            published_at = datetime.now()
+        published_at = data.published_at or datetime.now()
+        image_url = data.image_url.strip() if data.image_url else None
+        image_media_id = self.media_service.resolve_media_id(image_url)
 
         normalized_data = data.model_copy(
             update={
@@ -59,14 +52,17 @@ class BlogService:
                 "excerpt": data.excerpt.strip(),
                 "content": data.content.strip(),
                 "author": data.author.strip(),
-                "image_url": (data.image_url.strip() if data.image_url else None),
+                "image_url": image_url,
                 "seo_title": data.seo_title.strip(),
                 "seo_description": data.seo_description.strip(),
                 "published_at": published_at,
             },
         )
 
-        return self.repository.create(normalized_data)
+        return self.repository.create(
+            normalized_data,
+            extra_fields={"image_media_id": image_media_id},
+        )
 
     def update_blog(
         self,
@@ -79,15 +75,13 @@ class BlogService:
             raise LookupError("Blog not found")
 
         normalized_slug = data.slug.strip().lower()
-
-        blog_with_slug = self.repository.get_by_slug(
-            normalized_slug,
-        )
+        blog_with_slug = self.repository.get_by_slug(normalized_slug)
 
         if blog_with_slug is not None and blog_with_slug.id != blog_id:
-            raise ValueError(
-                "A blog with this slug already exists",
-            )
+            raise ValueError("A blog with this slug already exists")
+
+        image_url = data.image_url.strip() if data.image_url else None
+        image_media_id = self.media_service.resolve_media_id(image_url)
 
         normalized_data = data.model_copy(
             update={
@@ -97,7 +91,7 @@ class BlogService:
                 "excerpt": data.excerpt.strip(),
                 "content": data.content.strip(),
                 "author": data.author.strip(),
-                "image_url": (data.image_url.strip() if data.image_url else None),
+                "image_url": image_url,
                 "seo_title": data.seo_title.strip(),
                 "seo_description": data.seo_description.strip(),
             },
@@ -106,6 +100,7 @@ class BlogService:
         return self.repository.update(
             blog,
             normalized_data,
+            extra_fields={"image_media_id": image_media_id},
         )
 
     def update_publish_status(
@@ -118,10 +113,7 @@ class BlogService:
         if blog is None:
             raise ValueError("Blog not found")
 
-        return self.repository.update_publish_status(
-            blog,
-            is_published,
-        )
+        return self.repository.update_publish_status(blog, is_published)
 
     def delete_blog(
         self,

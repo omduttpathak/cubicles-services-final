@@ -15,6 +15,7 @@ import { getBlogPageSettings, type BlogPageSettings } from "@/api/blogPageApi"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 export default function Blogs() {
   const [blogs, setBlogs] = useState<Blog[]>([])
@@ -363,7 +364,7 @@ export default function Blogs() {
                     <div className="relative overflow-hidden">
                       {blog.imageUrl ? (
                         <img
-                          src={blog.imageUrl}
+                          src={resolveMediaUrl(blog.imageUrl) ?? undefined}
                           alt={blog.title}
                           loading="lazy"
                           className="h-60 w-full object-cover transition duration-700 group-hover:scale-105"

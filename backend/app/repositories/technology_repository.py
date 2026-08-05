@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.models.technology import Technology
@@ -78,31 +80,47 @@ class TechnologyRepository:
     def create(
         self,
         data: TechnologyCreate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> Technology:
-        technology = Technology(
-            **data.model_dump(),
-        )
+        values = data.model_dump()
 
-        self.db.add(technology)
-        self.db.commit()
-        self.db.refresh(technology)
+        if extra_fields:
+            values.update(extra_fields)
 
-        return technology
+        technology = Technology(**values)
+
+        try:
+            self.db.add(technology)
+            self.db.commit()
+            self.db.refresh(technology)
+            return technology
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update(
         self,
         technology: Technology,
         data: TechnologyUpdate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> Technology:
         update_data = data.model_dump()
 
-        for field, value in update_data.items():
-            setattr(technology, field, value)
+        if extra_fields:
+            update_data.update(extra_fields)
 
-        self.db.commit()
-        self.db.refresh(technology)
+        try:
+            for field, value in update_data.items():
+                setattr(technology, field, value)
 
-        return technology
+            self.db.commit()
+            self.db.refresh(technology)
+            return technology
+        except Exception:
+            self.db.rollback()
+            raise
 
     def delete(
         self,

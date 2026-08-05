@@ -9,6 +9,7 @@ import {
 } from "@/api/technologiesApi"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 type TechnologySectionProps = {
   title: string
@@ -427,7 +428,7 @@ function TechnologyVisual({
     return (
       <div className={containerClassName}>
         <img
-          src={technology.logo_url}
+          src={resolveMediaUrl(technology.logo_url) ?? undefined}
           alt={`${technology.name} logo`}
           loading="lazy"
           className="size-full object-contain"

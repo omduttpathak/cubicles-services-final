@@ -43,9 +43,7 @@ function mapService(service: ServiceApiResponse): Service {
     icon: service.icon,
     shortDescription: service.short_description,
     description: service.description,
-    highlights: Array.isArray(service.highlights)
-      ? service.highlights
-      : [],
+    highlights: Array.isArray(service.highlights) ? service.highlights : [],
     heroTitle: service.hero_title,
     heroDescription: service.hero_description,
     seoTitle: service.seo_title,
@@ -84,21 +82,17 @@ function extractServices(payload: unknown): ServiceApiResponse[] {
 }
 
 export async function getServices(): Promise<Service[]> {
-  const response = await api.get<
-    ServiceApiResponse[] | ServicesApiEnvelope
-  >("/services")
+  const response = await api.get<ServiceApiResponse[] | ServicesApiEnvelope>(
+    "/services"
+  )
 
   const services = extractServices(response.data)
 
   return services.map(mapService)
 }
 
-export async function getServiceBySlug(
-  slug: string
-): Promise<Service> {
-  const response = await api.get<ServiceApiResponse>(
-    `/services/${slug}`
-  )
+export async function getServiceBySlug(slug: string): Promise<Service> {
+  const response = await api.get<ServiceApiResponse>(`/services/${slug}`)
 
   return mapService(response.data)
 }

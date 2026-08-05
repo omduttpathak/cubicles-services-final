@@ -181,8 +181,7 @@ const buttonVariants = cva(
           "[&_svg:not([class*='size-'])]:size-3.5",
         ].join(" "),
 
-        "icon-lg":
-          "size-12 rounded-xl [&_svg:not([class*='size-'])]:size-5",
+        "icon-lg": "size-12 rounded-xl [&_svg:not([class*='size-'])]:size-5",
       },
     },
 

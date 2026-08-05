@@ -17,6 +17,7 @@ import {
 import type { TechnologyPageSettings } from "@/api/technologyPageApi"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 type TechnologyGroup = {
   category: string
@@ -388,7 +389,7 @@ function TechnologyVisual({
     return (
       <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <img
-          src={technology.logo_url}
+          src={resolveMediaUrl(technology.logo_url) ?? undefined}
           alt={`${technology.name} logo`}
           className="h-9 w-9 object-contain"
           loading="lazy"

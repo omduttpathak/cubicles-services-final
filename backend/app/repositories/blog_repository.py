@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -49,29 +50,47 @@ class BlogRepository:
     def create(
         self,
         data: BlogCreate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> Blog:
-        blog = Blog(**data.model_dump())
+        values = data.model_dump()
 
-        self.db.add(blog)
-        self.db.commit()
-        self.db.refresh(blog)
+        if extra_fields:
+            values.update(extra_fields)
 
-        return blog
+        blog = Blog(**values)
+
+        try:
+            self.db.add(blog)
+            self.db.commit()
+            self.db.refresh(blog)
+            return blog
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update(
         self,
         blog: Blog,
         data: BlogUpdate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> Blog:
         update_data = data.model_dump()
 
-        for field, value in update_data.items():
-            setattr(blog, field, value)
+        if extra_fields:
+            update_data.update(extra_fields)
 
-        self.db.commit()
-        self.db.refresh(blog)
+        try:
+            for field, value in update_data.items():
+                setattr(blog, field, value)
 
-        return blog
+            self.db.commit()
+            self.db.refresh(blog)
+            return blog
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update_publish_status(
         self,

@@ -53,8 +53,8 @@ function StatusBadge({ isPublished }: { isPublished: boolean }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
         isPublished
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
-          : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 ring-inset"
+          : "bg-amber-50 text-amber-700 ring-1 ring-amber-200 ring-inset"
       }`}
     >
       <span
@@ -319,14 +319,14 @@ export default function AdminCaseStudies() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search by title, slug, industry or service..."
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pr-4 pl-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pr-4 pl-11 text-sm text-slate-900 transition outline-none placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <select
               value={selectedStatus}
               onChange={(event) => setSelectedStatus(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
             >
               <option value="all">All Statuses</option>
               <option value="published">Published</option>
@@ -453,7 +453,9 @@ export default function AdminCaseStudies() {
                             <button
                               type="button"
                               disabled={updatingId === caseStudy.id}
-                              onClick={() => void handlePublishStatus(caseStudy)}
+                              onClick={() =>
+                                void handlePublishStatus(caseStudy)
+                              }
                               title={
                                 caseStudy.is_published
                                   ? "Unpublish case study"
@@ -510,19 +512,25 @@ export default function AdminCaseStudies() {
 
                   <dl className="mt-5 grid gap-4 border-y border-slate-100 py-4 sm:grid-cols-3">
                     <div>
-                      <dt className="text-xs font-medium text-slate-500">Industry</dt>
+                      <dt className="text-xs font-medium text-slate-500">
+                        Industry
+                      </dt>
                       <dd className="mt-1 text-sm font-semibold text-slate-800">
                         {caseStudy.industry}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-medium text-slate-500">Service</dt>
+                      <dt className="text-xs font-medium text-slate-500">
+                        Service
+                      </dt>
                       <dd className="mt-1 text-sm font-semibold text-slate-800">
                         {caseStudy.service}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-medium text-slate-500">Published</dt>
+                      <dt className="text-xs font-medium text-slate-500">
+                        Published
+                      </dt>
                       <dd className="mt-1 text-sm font-semibold text-slate-800">
                         {formatPublishedDate(caseStudy.published_at)}
                       </dd>
@@ -559,9 +567,15 @@ export default function AdminCaseStudies() {
                       }`}
                     >
                       {caseStudy.is_published ? (
-                        <><Undo2 className="h-4 w-4" />Unpublish</>
+                        <>
+                          <Undo2 className="h-4 w-4" />
+                          Unpublish
+                        </>
                       ) : (
-                        <><Globe2 className="h-4 w-4" />Publish</>
+                        <>
+                          <Globe2 className="h-4 w-4" />
+                          Publish
+                        </>
                       )}
                     </button>
                     <button
@@ -580,11 +594,21 @@ export default function AdminCaseStudies() {
 
             <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-600">
-                Showing <span className="font-semibold text-slate-950">{startIndex + 1}</span>{" "}
-                to <span className="font-semibold text-slate-950">
-                  {Math.min(startIndex + caseStudiesPerPage, filteredCaseStudies.length)}
+                Showing{" "}
+                <span className="font-semibold text-slate-950">
+                  {startIndex + 1}
                 </span>{" "}
-                of <span className="font-semibold text-slate-950">{filteredCaseStudies.length}</span>{" "}
+                to{" "}
+                <span className="font-semibold text-slate-950">
+                  {Math.min(
+                    startIndex + caseStudiesPerPage,
+                    filteredCaseStudies.length
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-slate-950">
+                  {filteredCaseStudies.length}
+                </span>{" "}
                 case studies
               </p>
 
@@ -598,7 +622,7 @@ export default function AdminCaseStudies() {
                   <ArrowLeft className="h-4 w-4" />
                   Previous
                 </button>
-                <span className="whitespace-nowrap text-sm font-medium text-slate-600">
+                <span className="text-sm font-medium whitespace-nowrap text-slate-600">
                   Page {safeCurrentPage} of {totalPages}
                 </span>
                 <button

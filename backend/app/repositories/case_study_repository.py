@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -54,27 +55,47 @@ class CaseStudyRepository:
     def create(
         self,
         data: CaseStudyCreate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> CaseStudy:
-        case_study = CaseStudy(**data.model_dump())
+        values = data.model_dump()
 
-        self.db.add(case_study)
-        self.db.commit()
-        self.db.refresh(case_study)
+        if extra_fields:
+            values.update(extra_fields)
 
-        return case_study
+        case_study = CaseStudy(**values)
+
+        try:
+            self.db.add(case_study)
+            self.db.commit()
+            self.db.refresh(case_study)
+            return case_study
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update(
         self,
         case_study: CaseStudy,
         data: CaseStudyUpdate,
+        *,
+        extra_fields: dict[str, Any] | None = None,
     ) -> CaseStudy:
-        for field, value in data.model_dump().items():
-            setattr(case_study, field, value)
+        update_data = data.model_dump()
 
-        self.db.commit()
-        self.db.refresh(case_study)
+        if extra_fields:
+            update_data.update(extra_fields)
 
-        return case_study
+        try:
+            for field, value in update_data.items():
+                setattr(case_study, field, value)
+
+            self.db.commit()
+            self.db.refresh(case_study)
+            return case_study
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update_publish_status(
         self,

@@ -11,6 +11,7 @@ import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import RichTextContent from "@/components/common/RichTextContent"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 export default function TechnologyDetails() {
   const { slug } = useParams<{
@@ -213,7 +214,7 @@ function TechnologyVisual({
     return (
       <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white p-4 shadow-lg">
         <img
-          src={technology.logo_url}
+          src={resolveMediaUrl(technology.logo_url) ?? undefined}
           alt={`${technology.name} logo`}
           className="h-full w-full object-contain"
         />

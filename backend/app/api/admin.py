@@ -132,6 +132,11 @@ from app.services.site_setting_service import (
     SiteSettingService,
 )
 
+from app.services.media_asset_service import (
+    MAX_IMAGE_SIZE,
+    MediaAssetService,
+)
+
 from app.schemas.homepage_faq import (
     HomepageFaqCreate,
     HomepageFaqResponse,
@@ -1645,152 +1650,6 @@ def delete_admin_homepage_faq(
         status_code=status.HTTP_204_NO_CONTENT,
     )
 
-IMAGE_UPLOAD_DIRECTORY = Path(
-    "uploads/images",
-)
-
-MEDIA_IMAGE_EXTENSIONS = {
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".webp",
-    ".svg",
-    ".ico",
-}
-
-ALLOWED_IMAGE_EXTENSIONS = {
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".webp",
-    ".svg",
-    ".ico",
-}
-
-ALLOWED_IMAGE_CONTENT_TYPES = {
-    "image/png",
-    "image/jpeg",
-    "image/webp",
-    "image/svg+xml",
-    "image/x-icon",
-    "image/vnd.microsoft.icon",
-}
-
-MAX_IMAGE_SIZE = 5 * 1024 * 1024
-
-
-def get_media_usage(
-    db: Session,
-    filename: str,
-) -> list[dict[str, str | int]]:
-    usage: list[dict[str, str | int]] = []
-
-    media_path = (
-        f"/uploads/images/{quote(filename)}"
-    )
-
-    site_settings = (
-        db.query(SiteSetting)
-        .filter(
-            SiteSetting.logo_url.endswith(
-                media_path,
-            )
-            | SiteSetting.favicon_url.endswith(
-                media_path,
-            )
-        )
-        .all()
-    )
-
-    for settings in site_settings:
-        if (
-            settings.logo_url
-            and settings.logo_url.endswith(
-                media_path,
-            )
-        ):
-            usage.append(
-                {
-                    "type": "site_logo",
-                    "id": settings.id,
-                    "label": "Site logo",
-                }
-            )
-
-        if (
-            settings.favicon_url
-            and settings.favicon_url.endswith(
-                media_path,
-            )
-        ):
-            usage.append(
-                {
-                    "type": "favicon",
-                    "id": settings.id,
-                    "label": "Site favicon",
-                }
-            )
-
-    blogs = (
-        db.query(Blog)
-        .filter(
-            Blog.image_url.endswith(
-                media_path,
-            ),
-        )
-        .all()
-    )
-
-    for blog in blogs:
-        usage.append(
-            {
-                "type": "blog",
-                "id": blog.id,
-                "label": blog.title,
-            }
-        )
-
-    case_studies = (
-        db.query(CaseStudy)
-        .filter(
-            CaseStudy.image_url.endswith(
-                media_path,
-            ),
-        )
-        .all()
-    )
-
-    for case_study in case_studies:
-        usage.append(
-            {
-                "type": "case_study",
-                "id": case_study.id,
-                "label": case_study.title,
-            }
-        )
-
-    technologies = (
-        db.query(Technology)
-        .filter(
-            Technology.logo_url.endswith(
-                media_path,
-            ),
-        )
-        .all()
-    )
-
-    for technology in technologies:
-        usage.append(
-            {
-                "type": "technology",
-                "id": technology.id,
-                "label": technology.name,
-            }
-        )
-
-    return usage
-
-
 @router.post(
     "/uploads/images",
     status_code=status.HTTP_201_CREATED,
@@ -1798,93 +1657,35 @@ def get_media_usage(
 async def upload_admin_image(
     request: Request,
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
     current_admin: Admin = Depends(
         get_current_admin,
     ),
 ):
-    original_filename = file.filename or ""
-
-    extension = Path(
-        original_filename,
-    ).suffix.lower()
-
-    if extension not in ALLOWED_IMAGE_EXTENSIONS:
-        await file.close()
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Image must be a PNG, JPG, JPEG, "
-                "WebP, SVG or ICO file."
-            ),
-        )
-
-    if (
-        file.content_type
-        not in ALLOWED_IMAGE_CONTENT_TYPES
-    ):
-        await file.close()
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported image content type.",
-        )
-
     try:
         file_content = await file.read(
             MAX_IMAGE_SIZE + 1,
         )
 
-        if not file_content:
+        service = MediaAssetService(db)
+
+        try:
+            asset = service.create_image(
+                original_filename=file.filename or "",
+                content_type=file.content_type,
+                file_content=file_content,
+            )
+        except ValueError as error:
             raise HTTPException(
-                status_code=(
-                    status.HTTP_400_BAD_REQUEST
-                ),
-                detail="The uploaded image is empty.",
-            )
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(error),
+            ) from error
 
-        if len(file_content) > MAX_IMAGE_SIZE:
-            raise HTTPException(
-                status_code=(
-                    status.HTTP_400_BAD_REQUEST
-                ),
-                detail=(
-                    "Image file must not exceed 5 MB."
-                ),
-            )
-
-        IMAGE_UPLOAD_DIRECTORY.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        stored_filename = (
-            f"{uuid4().hex}{extension}"
-        )
-
-        stored_path = (
-            IMAGE_UPLOAD_DIRECTORY
-            / stored_filename
-        )
-
-        stored_path.write_bytes(
-            file_content,
-        )
-
-        file_url = str(
-            request.url_for(
-                "uploads",
-                path=(
-                    f"images/{stored_filename}"
-                ),
-            )
-        )
+        file_url = f"/api/media/{asset.public_id}"
 
         return {
-            "message": (
-                "Image uploaded successfully."
-            ),
-            "filename": stored_filename,
+            "message": "Image uploaded successfully.",
+            "filename": asset.filename,
             "file_url": file_url,
         }
     finally:
@@ -1901,69 +1702,26 @@ def get_admin_media_library(
         get_current_admin,
     ),
 ):
-    IMAGE_UPLOAD_DIRECTORY.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
+    service = MediaAssetService(db)
     media_items = []
 
-    for file_path in (
-        IMAGE_UPLOAD_DIRECTORY.iterdir()
-    ):
-        if not file_path.is_file():
-            continue
-
-        extension = file_path.suffix.lower()
-
-        if (
-            extension
-            not in MEDIA_IMAGE_EXTENSIONS
-        ):
-            continue
-
-        file_stat = file_path.stat()
-
-        file_url = str(
-            request.url_for(
-                "uploads",
-                path=(
-                    f"images/"
-                    f"{quote(file_path.name)}"
-                ),
-            )
-        )
-
-        created_at = datetime.fromtimestamp(
-            file_stat.st_mtime,
-            tz=timezone.utc,
-        ).isoformat()
-
-        usage = get_media_usage(
-            db,
-            file_path.name,
-        )
+    for asset in service.list_assets():
+        usage = service.get_usage(asset)
 
         media_items.append(
             {
-                "filename": file_path.name,
-                "file_url": file_url,
-                "extension": extension,
-                "size_bytes": (
-                    file_stat.st_size
-                ),
-                "created_at": created_at,
+                "filename": asset.filename,
+                "file_url": f"/api/media/{asset.public_id}",
+                "extension": asset.extension,
+                "size_bytes": asset.file_size,
+                "created_at": asset.created_at.isoformat(),
                 "is_used": bool(usage),
                 "usage": usage,
             }
         )
 
-    media_items.sort(
-        key=lambda item: item["created_at"],
-        reverse=True,
-    )
-
     return media_items
+
 
 @router.get(
     "/navigation",
@@ -2126,77 +1884,20 @@ def delete_admin_media_file(
 
     if safe_filename != filename:
         raise HTTPException(
-            status_code=(
-                status.HTTP_400_BAD_REQUEST
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid media filename.",
         )
 
-    file_path = (
-        IMAGE_UPLOAD_DIRECTORY
-        / safe_filename
-    )
+    service = MediaAssetService(db)
+    asset = service.get_by_filename(safe_filename)
 
-    try:
-        resolved_directory = (
-            IMAGE_UPLOAD_DIRECTORY.resolve()
+    if asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Media asset not found.",
         )
 
-        resolved_file = file_path.resolve()
-    except OSError as error:
-        raise HTTPException(
-            status_code=(
-                status.HTTP_400_BAD_REQUEST
-            ),
-            detail="Invalid media filename.",
-        ) from error
-
-    if (
-        resolved_file.parent
-        != resolved_directory
-    ):
-        raise HTTPException(
-            status_code=(
-                status.HTTP_400_BAD_REQUEST
-            ),
-            detail="Invalid media filename.",
-        )
-
-    if not resolved_file.exists():
-        raise HTTPException(
-            status_code=(
-                status.HTTP_404_NOT_FOUND
-            ),
-            detail="Media file not found.",
-        )
-
-    if not resolved_file.is_file():
-        raise HTTPException(
-            status_code=(
-                status.HTTP_400_BAD_REQUEST
-            ),
-            detail=(
-                "The selected path is not a file."
-            ),
-        )
-
-    extension = resolved_file.suffix.lower()
-
-    if (
-        extension
-        not in MEDIA_IMAGE_EXTENSIONS
-    ):
-        raise HTTPException(
-            status_code=(
-                status.HTTP_400_BAD_REQUEST
-            ),
-            detail="Unsupported media file.",
-        )
-
-    usage = get_media_usage(
-        db,
-        safe_filename,
-    )
+    usage = service.get_usage(asset)
 
     if usage:
         usage_labels = ", ".join(
@@ -2205,9 +1906,7 @@ def delete_admin_media_file(
         )
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_409_CONFLICT
-            ),
+            status_code=status.HTTP_409_CONFLICT,
             detail=(
                 "This media file is currently "
                 f"in use by: {usage_labels}. "
@@ -2216,22 +1915,10 @@ def delete_admin_media_file(
             ),
         )
 
-    try:
-        resolved_file.unlink()
-    except OSError as error:
-        raise HTTPException(
-            status_code=(
-                status.HTTP_500_INTERNAL_SERVER_ERROR
-            ),
-            detail=(
-                "Unable to delete the media file."
-            ),
-        ) from error
+    service.delete_asset(asset)
 
     return Response(
-        status_code=(
-            status.HTTP_204_NO_CONTENT
-        ),
+        status_code=status.HTTP_204_NO_CONTENT,
     )
 
 

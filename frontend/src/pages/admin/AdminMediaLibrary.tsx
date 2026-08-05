@@ -26,6 +26,7 @@ import { uploadAdminImage } from "@/api/adminUploadsApi"
 import ErrorState from "@/components/common/ErrorState"
 import PageLoader from "@/components/common/PageLoader"
 import SEO from "@/components/seo/SEO"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 const itemsPerPage = 12
 
@@ -527,7 +528,7 @@ function MediaCard({
         className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-slate-100"
       >
         <img
-          src={item.file_url}
+          src={resolveMediaUrl(item.file_url) ?? undefined}
           alt={item.filename}
           className="h-full w-full object-contain p-4 transition duration-300 group-hover:scale-[1.02]"
         />
@@ -686,7 +687,7 @@ function MediaPreviewModal({
 
         <div className="flex min-h-[420px] items-center justify-center bg-slate-100 p-6">
           <img
-            src={item.file_url}
+            src={resolveMediaUrl(item.file_url) ?? undefined}
             alt={item.filename}
             className="max-h-[65vh] max-w-full object-contain"
           />
