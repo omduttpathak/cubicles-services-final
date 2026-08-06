@@ -106,3 +106,49 @@ Thumbs.db
 !backend/uploads/
 backend/uploads/*
 !backend/uploads/README.md
+
+# Local development archives
+.local-archive/
+
+# Environment secrets
+.env
+.env.local
+.env.development
+.env.production.local
+
+# Python
+backend/venv/
+backend/.venv/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Database backups and generated archives
+*.sql
+*.sql.gz
+
+# Runtime uploads and logs
+backend/uploads/
+
+# Preserve the private backup directory structure only
+
+# Database dumps
+database/*.sql
+database/*.dump
+database/*.gz
+!database/cubicles_services_complete_backup.sql.gz
+
+# Local development artifacts
+.local-archive/
+
+# Environment and secrets
+
+# Local archives
+
+# Node and frontend builds
+
+# Editor and operating-system files
+
+# Keep the database backup utility script
+!scripts/backup-db.sh

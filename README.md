@@ -1,119 +1,77 @@
 # Cubicles Services
 
-Cubicles Services is a full-stack company website and content-management platform for managing cloud, DevOps, application-modernization, technology, case-study, blog, career and contact content.
-
-The application includes a public website, protected admin portal, REST API, MySQL database, media uploads and deployment support for AWS EC2.
+Cubicles Services is a full-stack company website and content management system built with React, TypeScript, FastAPI and MySQL.
 
 ## Features
 
-### Public website
-
-- Dynamic homepage
-- About page
-- Services listing and detail pages
-- Technologies listing and detail pages
-- Blog listing and detail pages
-- Case-study listing and detail pages
-- Careers page and job openings
-- Career application form with resume upload
-- Contact form
-- Dynamic navigation and footer
-- Dynamic site settings and branding
-- Responsive design
-- Page-level SEO metadata
-- Custom loading, error and Not Found states
-
-### Admin portal
-
-- JWT-based administrator authentication
-- Dashboard statistics
+- Public company website
+- Secure admin panel
 - Homepage content management
-- About-page content management
-- Services management
-- Technologies management
-- Blogs management
-- Case-studies management
-- Careers-page management
-- Job-openings management
-- Career-applications management
-- Contact-request management
-- Navigation management
-- Footer-link management
-- Site-settings management
-- Media library
-- Image upload and validation
-- Draft, published, active and visibility controls
+- Services and technologies management
+- Blogs and case studies
+- Careers and job applications
+- Contact enquiries
+- Navigation and footer management
+- Site settings
+- Media library and image variants
+- Docker-based deployment
+- Alembic database migrations
+- Database backup and restore utilities
 
-## Technology stack
+## Technology Stack
 
 ### Frontend
 
 - React
 - TypeScript
 - Vite
-- React Router
 - Tailwind CSS
+- React Router
 - Axios
 - React Hook Form
 - Zod
-- Sonner
-- Lucide React
-- React Helmet Async
+- TipTap
+- Framer Motion
 
 ### Backend
 
 - Python
 - FastAPI
 - SQLAlchemy
-- Pydantic
-- PyMySQL
 - Alembic
+- PyMySQL
 - JWT authentication
-- bcrypt password hashing
-- Uvicorn
+- Pillow
 
-### Database and infrastructure
+### Infrastructure
 
-- MySQL 8.4
+- Docker
 - Docker Compose
+- MySQL 8.4
 - Nginx
-- systemd
-- AWS EC2
-- Git and GitHub
 
-## Repository structure
+## Project Structure
 
 ```text
-cubicles-services/
+cubicles-services-latest/
 ├── backend/
 │   ├── alembic/
 │   ├── app/
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── repositories/
-│   │   ├── schemas/
-│   │   └── services/
-│   ├── uploads/
-│   ├── .env.example
-│   ├── alembic.ini
-│   ├── docker-compose.yaml
+│   ├── Dockerfile
+│   ├── docker-entrypoint.sh
 │   └── requirements.txt
 ├── frontend/
-│   ├── public/
 │   ├── src/
-│   │   ├── api/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── pages/
-│   │   ├── routes/
-│   │   ├── schemas/
-│   │   └── utils/
-│   ├── .env.example
-│   ├── package.json
-│   └── vite.config.ts
-├── docs/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
+├── database/
+│   └── cubicles_services_complete_backup.sql.gz
+├── scripts/
+│   ├── backup-db.sh
+│   ├── restore-db.sh
+│   └── reset-db.sh
+├── compose.yaml
+├── .env.example
 ├── .gitignore
-├── CHANGELOG.md
 └── README.md

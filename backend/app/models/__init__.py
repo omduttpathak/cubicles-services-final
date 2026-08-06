@@ -25,3 +25,4 @@ from app.models.technology_page import TechnologyPage
 from app.models.blog_page import BlogPage
 from app.models.case_studies_page import CaseStudiesPage
 from app.models.media_asset import MediaAsset
+from app.models.media_asset_variant import MediaAssetVariant
