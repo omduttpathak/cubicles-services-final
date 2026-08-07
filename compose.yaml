@@ -13,6 +13,12 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+      # On a brand-new MySQL volume, the official MySQL image
+      # automatically restores the complete Cubicles Services database.
+      #
+      # This runs only during the first initialization of the volume.
+      - ./database/cubicles_services_complete_backup.sql.gz:/docker-entrypoint-initdb.d/10-cubicles-services.sql.gz:ro
+
     ports:
       - "127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306"
 
