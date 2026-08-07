@@ -86,7 +86,7 @@ cp .env.example .env
 # Update:
 # MYSQL_ROOT_PASSWORD
 # MYSQL_PASSWORD
-# JWT_SECRET_KEY
+# JWT_SECRET_KEY  (generate with : --> #openssl rand -hex 64)
 
 docker compose up -d --build
 
