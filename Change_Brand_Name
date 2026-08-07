@@ -1,0 +1,71 @@
+Step 1 - Find every occurrence-->
+
+Run this from the project root:
+
+grep -RIn \
+  --exclude-dir=.git \
+  --exclude-dir=node_modules \
+  --exclude-dir=venv \
+  --exclude-dir=__pycache__ \
+  --exclude='*.sql.gz' \
+  "Cubicles Services" .
+
+This will show something like:
+
+frontend/src/components/layout/Header.tsx:28: Cubicles Services
+backend/app/main.py:14: Cubicles Services API
+README.md:1: Cubicles Services
+...
+
+Review the output first.
+
+Step 2 - Replace everywhere -->
+
+After you're satisfied, run:
+
+find . \
+  -type f \
+  ! -path "./.git/*" \
+  ! -path "./frontend/node_modules/*" \
+  ! -path "./backend/venv/*" \
+  ! -path "./database/*.sql.gz" \
+  -exec sed -i 's/Cubicles Services/Cubicles Place/g' {} +
+
+That's it.
+
+For email-->
+
+find: 
+
+grep -RIn \
+  --exclude-dir=.git \
+  --exclude-dir=node_modules \
+  --exclude-dir=venv \
+  "info@cubiclesservices.com" .
+
+Replace:
+
+find . \
+  -type f \
+  ! -path "./.git/*" \
+  ! -path "./frontend/node_modules/*" \
+  ! -path "./backend/venv/*" \
+  -exec sed -i 's/info@cubiclesservices.com/info@cubiclesplace.com/g' {} +
+
+
+For domain-->
+
+Find:
+
+grep -RIn \
+"cubiclesservices.com" .
+
+Replace:
+
+find . \
+-type f \
+! -path "./.git/*" \
+! -path "./frontend/node_modules/*" \
+! -path "./backend/venv/*" \
+-exec sed -i 's/cubiclesservices.com/cubiclesplace.com/g' {} +
+
