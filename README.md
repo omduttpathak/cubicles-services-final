@@ -75,3 +75,20 @@ cubicles-services-latest/
 ├── .env.example
 ├── .gitignore
 └── README.md
+
+
+git clone <repository>
+
+cd cubicles-services-final
+
+cp .env.example .env
+
+# Update:
+# MYSQL_ROOT_PASSWORD
+# MYSQL_PASSWORD
+# JWT_SECRET_KEY
+
+docker compose up -d --build
+
+Open:
+http://localhost:8080
