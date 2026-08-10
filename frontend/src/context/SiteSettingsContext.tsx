@@ -15,8 +15,8 @@ export const fallbackSiteSettings: SiteSettings = {
   logo_url: null,
   favicon_url: null,
   contact_email: "info@cubiclesservices.com",
-  contact_phone: null,
-  address: null,
+  contact_phone: "+91 98999 84777",
+  address: "Delhi, India",
   footer_description:
     "Cloud migration, application modernization, DevOps, Cybersecurity and managed IT services.",
   copyright_text: "© 2026 Cubicles Services. All rights reserved.",

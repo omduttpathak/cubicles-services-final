@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react"
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRight, Phone } from "lucide-react"
 import { Link, NavLink } from "react-router-dom"
 
 import { getNavigation, type NavigationItem } from "@/api/navigationApi"
 import { useSiteSettings } from "@/context/SiteSettingsContext"
+import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 import MobileMenu from "./MobileMenu"
-import { resolveMediaUrl } from "@/utils/mediaUrl"
 
 const fallbackNavigation: NavigationItem[] = [
   {
@@ -109,10 +109,20 @@ export default function Header() {
     void loadNavigation()
   }, [])
 
-  return (
-    <header className="sticky top-0 z-50">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white via-white/90 to-transparent" />
+  const regularNavigationItems = navigationItems.filter(
+    (item) => item.url?.trim() !== "/contact"
+  )
 
+  const contactNavigationItem = navigationItems.find(
+    (item) => item.url?.trim() === "/contact"
+  )
+
+  const phoneHref = settings.contact_phone
+    ? settings.contact_phone.replace(/[^\d+]/g, "")
+    : null
+
+  return (
+    <header className="relative z-50">
       <div className="relative px-3 pt-3 sm:px-5 lg:px-6">
         <div className="container mx-auto">
           <div className="relative flex h-18 items-center justify-between overflow-hidden rounded-2xl border border-white/70 bg-white/82 px-4 shadow-[0_16px_50px_rgb(15_23_42/0.09)] backdrop-blur-2xl sm:px-5 lg:px-6">
@@ -150,19 +160,40 @@ export default function Header() {
               )}
             </Link>
 
-            <nav
-              className="relative z-10 hidden items-center gap-1 md:flex"
-              aria-label="Primary navigation"
-            >
-              {navigationItems.map((item, index) => (
-                <DesktopNavigationItem
-                  key={`${item.id ?? "navigation"}-${
-                    item.url ?? "missing-url"
-                  }-${index}`}
-                  item={item}
-                />
-              ))}
-            </nav>
+            <div className="relative z-10 hidden items-center md:flex">
+              <nav
+                className="flex items-center gap-1"
+                aria-label="Primary navigation"
+              >
+                {regularNavigationItems.map((item, index) => (
+                  <DesktopNavigationItem
+                    key={`${item.id ?? "navigation"}-${
+                      item.url ?? "missing-url"
+                    }-${index}`}
+                    item={item}
+                  />
+                ))}
+              </nav>
+
+              {settings.contact_phone && phoneHref && (
+                <a
+                  href={`tel:${phoneHref}`}
+                  aria-label={`Call ${settings.contact_phone}`}
+                  title={`Call ${settings.contact_phone}`}
+                  className="ml-2 hidden h-11 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-3.5 text-sm font-semibold whitespace-nowrap text-slate-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:shadow-md xl:inline-flex"
+                >
+                  <span className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-50 to-violet-50 text-indigo-600">
+                    <Phone className="size-3.5" />
+                  </span>
+
+                  <span>{settings.contact_phone}</span>
+                </a>
+              )}
+
+              {contactNavigationItem && (
+                <DesktopNavigationItem item={contactNavigationItem} />
+              )}
+            </div>
 
             <div className="relative z-10 md:hidden">
               <MobileMenu items={navigationItems} />
@@ -197,7 +228,7 @@ function DesktopNavigationItem({ item }: { item: NavigationItem }) {
         rel={item.open_in_new_tab ? "noreferrer noopener" : undefined}
         className={navigationClassName}
       >
-        <span>{title}</span>
+        {title}
 
         {item.open_in_new_tab && <ArrowUpRight className="size-3.5" />}
       </a>
@@ -212,7 +243,7 @@ function DesktopNavigationItem({ item }: { item: NavigationItem }) {
         rel={item.open_in_new_tab ? "noreferrer noopener" : undefined}
         className={contactClassName}
       >
-        <span>{title}</span>
+        {title}
 
         <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
       </Link>
@@ -231,7 +262,7 @@ function DesktopNavigationItem({ item }: { item: NavigationItem }) {
     >
       {({ isActive }) => (
         <>
-          <span>{title}</span>
+          {title}
 
           <span
             aria-hidden="true"
