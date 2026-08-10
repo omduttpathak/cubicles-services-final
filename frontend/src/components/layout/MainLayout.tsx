@@ -1,14 +1,13 @@
 import { Outlet } from "react-router-dom"
 
 import ScrollToTop from "@/components/common/ScrollToTop"
+import ScrollToTopButton from "@/components/common/ScrollToTopButton"
 import Footer from "@/components/layout/Footer"
 import Header from "@/components/layout/Header"
 
 export default function MainLayout() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <ScrollToTop />
-
+    <div className="min-h-screen flex flex-col">
       <Header />
 
       <main className="flex-1">
@@ -16,6 +15,10 @@ export default function MainLayout() {
       </main>
 
       <Footer />
+
+      <ScrollToTop />
+
+      <ScrollToTopButton />
     </div>
   )
 }
