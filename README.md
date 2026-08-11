@@ -92,3 +92,9 @@ docker compose up -d --build
 
 Open:
 http://localhost:8080
+
+##############################################################################
+
+ENVIRONMENT=development means: “I’m running this on a laptop, test VM, EC2 IP, Azure VM IP, or any temporary machine. Be flexible.” That is why ALLOWED_HOSTS=* and HTTP URLs are acceptable in this mode. Use it while developing, testing, validating Docker, or checking the app through a raw IP such as http://EC2-IP:8080.
+
+ENVIRONMENT=production means: “This is the real live website.” In that mode, your backend deliberately becomes stricter. Your current code requires HTTPS for FRONTEND_URLS, does not allow ALLOWED_HOSTS=*, and expects real production hostnames. That is why production failed when you still had localhost HTTP URLs.
